@@ -6,6 +6,8 @@ This is the core logic behind [AgentScan](https://agentscan.netlify.app), an app
 It applies an opinionated scoring system to GitHub activity signals to classify accounts as human, bot, or potentially suspicious.
 The results are indicators, not verdicts. There’s no AI involved, just structured event analysis looking for patterns that feel a little off.
 
+In case you don't know what is a Voight-Kampff test [watch here](https://www.youtube.com/watch?v=Umc9ezAyJv0)
+
 ### Install
 ```bash
 npm install voight-kampff-test
