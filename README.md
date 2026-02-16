@@ -1,5 +1,5 @@
 # voight-kampff-test
-Programmatically detect humans, bots, and suspicious actors.
+Programmatically detect humans, bots, and suspicious actors on Github.
 
 
 This is the core logic powering [AgentScan](https://agentscan.netlify.app/), an app I didn't know I needed to build in the first place.
