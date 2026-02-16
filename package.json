@@ -1,0 +1,41 @@
+{
+  "name": "voight-kampff-test",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Programmatically detect humans, bots, and suspicious actors.",
+  "author": "Matteo Gabriele <m.gabriele.dev@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/MatteoGabriele/voight-kampff-test#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MatteoGabriele/voight-kampff-test.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MatteoGabriele/voight-kampff-test/issues"
+  },
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "bumpp": "^10.3.2",
+    "publint": "^0.3.17",
+    "tsdown": "^0.18.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  }
+}
