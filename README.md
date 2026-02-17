@@ -5,7 +5,7 @@ Programmatically detect humans, agents, and suspicious account on Github.
 This is the core logic behind [AgentScan](https://agentscan.netlify.app), an app I didn’t expect to build, but ended up creating after reading [this article](https://socket.dev/blog/ai-agent-lands-prs-in-major-oss-projects-targets-maintainers-via-cold-outreach) about open source projects being targeted by AI agents.
 
 It applies an opinionated scoring system to GitHub activity signals to classify accounts as human, bot, or potentially suspicious.
-The results are indicators, not verdicts. There’s no AI involved, just structured event analysis looking for patterns that feel a little off.
+The results are indicators, not verdicts. There’s no AI involved, just event analysis looking for patterns that feel a little off.
 
 In case you don't know what is a Voight-Kampff test [watch here](https://www.youtube.com/watch?v=Umc9ezAyJv0)
 
