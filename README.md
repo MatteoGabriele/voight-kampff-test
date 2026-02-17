@@ -1,4 +1,5 @@
 # voight-kampff-test
+
 Programmatically detect humans, agents, and suspicious account on Github.
 
 This is the core logic behind [AgentScan](https://agentscan.netlify.app), an app I didn’t expect to build, but ended up creating after reading [this article](https://socket.dev/blog/ai-agent-lands-prs-in-major-oss-projects-targets-maintainers-via-cold-outreach) about open source projects being targeted by AI agents.
@@ -9,21 +10,25 @@ The results are indicators, not verdicts. There’s no AI involved, just structu
 In case you don't know what is a Voight-Kampff test [watch here](https://www.youtube.com/watch?v=Umc9ezAyJv0)
 
 ### Install
+
 ```bash
 npm install voight-kampff-test
 ```
 
 ### Usage
+
 ```js
-import { identifyReplicant } from 'voight-kampff-test'
+import { identifyReplicant } from "voight-kampff-test";
 
-const user = {} // <-- `https://api.github.com/users/${username}`
-const events = [] // <-- `https://api.github.com/users/${username}/events?per_page=100`
+const user = {}; // <-- `https://api.github.com/users/${username}`
+const events = []; // <-- `https://api.github.com/users/${username}/events?per_page=100`
+const repos = []; // <-- `https://api.github.com/users/${username}/repos`
 
-const analysis = identifyReplicant(user, events)
+const analysis = identifyReplicant(user, events, repos);
 ```
 
 <img width="657" height="832" alt="Screenshot 2026-02-16 at 21 14 29" src="https://github.com/user-attachments/assets/8a616904-6459-4fd9-9d8f-9284bf9d1e29" />
 
 ### Issues and features requests
+
 Please drop an issue, if you find something that doesn't work, or have an idea for something that works better.
