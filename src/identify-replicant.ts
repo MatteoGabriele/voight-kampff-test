@@ -1,4 +1,7 @@
 import { CONFIG } from "./config";
+import dayjs from "dayjs";
+import minMax from "dayjs/plugin/minMax";
+dayjs.extend(minMax);
 
 import type {
   GitHubEvent,
@@ -19,8 +22,7 @@ export function identifyReplicant(
   const onlyOwnedRepos = repos.filter((repo) => !repo.fork);
   const onlyOwnedReposCount = onlyOwnedRepos.length;
 
-  const ageMs = Date.now() - new Date(user.created_at).getTime();
-  const accountAge = Math.round(ageMs / (1000 * 60 * 60 * 24));
+  const accountAge = dayjs().diff(user.created_at, "days");
 
   if (accountAge < CONFIG.AGE_NEW_ACCOUNT) {
     flags.push({
@@ -63,30 +65,31 @@ export function identifyReplicant(
 
     // Commits
     if (commitEvents.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
-      const timestamps = commitEvents.map((e) =>
-        new Date(e.created_at).getTime(),
-      );
-      const oldestEvent = Math.min(...timestamps);
-      const newestEvent = Math.max(...timestamps);
-      const eventSpanDays = Math.max(
-        1,
-        Math.round((newestEvent - oldestEvent) / (1000 * 60 * 60 * 24)),
-      );
-      const commitsPerDay = commitEvents.length / eventSpanDays;
-      if (commitsPerDay >= CONFIG.ACTIVITY_DENSITY_EXTREME) {
-        flags.push({
-          label: "Very high commit rate",
-          points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY,
-          detail: `${commitEvents.length} commits in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
-        });
-      } else if (commitsPerDay >= CONFIG.ACTIVITY_DENSITY_HIGH) {
-        flags.push({
-          label: "High commit rate",
-          points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY,
-          detail: `${commitEvents.length} commits in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
-        });
+      const timestamps = commitEvents.map((e) => dayjs(e.created_at));
+
+      const oldestEvent = dayjs.min(timestamps);
+      const newestEvent = dayjs.max(timestamps);
+
+      if (newestEvent) {
+        const eventSpanDays = Math.max(1, newestEvent.diff(oldestEvent, "day"));
+        const commitsPerDay = commitEvents.length / eventSpanDays;
+
+        if (commitsPerDay >= CONFIG.ACTIVITY_DENSITY_EXTREME) {
+          flags.push({
+            label: "Very high commit rate",
+            points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY,
+            detail: `${commitEvents.length} commits in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
+          });
+        } else if (commitsPerDay >= CONFIG.ACTIVITY_DENSITY_HIGH) {
+          flags.push({
+            label: "High commit rate",
+            points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY,
+            detail: `${commitEvents.length} commits in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
+          });
+        }
       }
     }
+
     // PRs (flag more aggressively)
     if (prEvents.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
       const timestamps = prEvents.map((e) => new Date(e.created_at).getTime());
