@@ -59,60 +59,92 @@ export function identifyReplicant(
 
   if (isNewOrYoungAccount && events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
     const commitEvents = events.filter((e) => e.type === "PushEvent");
-    const prEvents = events.filter((e) => e.type === "PullRequestEvent");
-
     const userLogin = user.login.toLowerCase();
 
-    // Commits
     if (commitEvents.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
-      const timestamps = commitEvents.map((e) => dayjs(e.created_at));
+      const timestamps = commitEvents
+        .map((e) => dayjs(e.created_at))
+        .sort((a, b) => a.valueOf() - b.valueOf());
 
+      let maxCommitsInHour = 0;
+      let windowStartIndex = 0;
+
+      for (
+        let windowEndIndex = 0;
+        windowEndIndex < timestamps.length;
+        windowEndIndex++
+      ) {
+        const windowEnd = timestamps[windowEndIndex];
+
+        // Slide window start forward until within 1 hour
+        while (windowEnd.diff(timestamps[windowStartIndex], "hour", true) > 1) {
+          windowStartIndex++;
+        }
+
+        const commitsInWindow = windowEndIndex - windowStartIndex + 1;
+        maxCommitsInHour = Math.max(maxCommitsInHour, commitsInWindow);
+      }
+
+      if (maxCommitsInHour >= CONFIG.HOURLY_ACTIVITY_EXTREME) {
+        flags.push({
+          label: "Extreme commit burst",
+          points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY,
+          detail: `${maxCommitsInHour} commits within 1 hour`,
+        });
+      } else if (maxCommitsInHour >= CONFIG.HOURLY_ACTIVITY_HIGH) {
+        flags.push({
+          label: "High commit burst",
+          points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY,
+          detail: `${maxCommitsInHour} commits within 1 hour`,
+        });
+      }
+
+      // Detect ultra-tight bursts (e.g., 3+ commits within 10 seconds)
+      let tightBurstCount = 0;
+
+      for (let i = 1; i < timestamps.length; i++) {
+        const diffSeconds = timestamps[i].diff(timestamps[i - 1], "second");
+
+        if (diffSeconds <= CONFIG.TIGHT_COMMIT_SECONDS) {
+          tightBurstCount++;
+        }
+      }
+
+      if (tightBurstCount >= CONFIG.TIGHT_COMMIT_THRESHOLD) {
+        flags.push({
+          label: "Commits too tightly spaced",
+          points: CONFIG.POINTS_TIGHT_BURST,
+          detail: `${tightBurstCount + 1} commits within very short intervals`,
+        });
+      }
+    }
+
+    // PRs (flag more aggressively)
+    const prEvents = events.filter((e) => e.type === "PullRequestEvent");
+
+    if (prEvents.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+      const timestamps = prEvents.map((e) => dayjs(e.created_at));
       const oldestEvent = dayjs.min(timestamps);
       const newestEvent = dayjs.max(timestamps);
 
       if (newestEvent) {
         const eventSpanDays = Math.max(1, newestEvent.diff(oldestEvent, "day"));
-        const commitsPerDay = commitEvents.length / eventSpanDays;
+        const prsPerDay = prEvents.length / eventSpanDays;
 
-        if (commitsPerDay >= CONFIG.ACTIVITY_DENSITY_EXTREME) {
+        if (prsPerDay >= CONFIG.ACTIVITY_DENSITY_EXTREME / 2) {
+          // PRs are much rarer
           flags.push({
-            label: "Very high commit rate",
-            points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY,
-            detail: `${commitEvents.length} commits in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
+            label: "Extremely high PR rate",
+            points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY + 10,
+            detail: `${prEvents.length} PRs in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
           });
-        } else if (commitsPerDay >= CONFIG.ACTIVITY_DENSITY_HIGH) {
+        } else if (prsPerDay >= CONFIG.ACTIVITY_DENSITY_HIGH / 2) {
           flags.push({
-            label: "High commit rate",
-            points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY,
-            detail: `${commitEvents.length} commits in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
+            label: "High PR rate",
+            points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY + 5,
+            detail: `${prEvents.length} PRs in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
           });
         }
-      }
-    }
-
-    // PRs (flag more aggressively)
-    if (prEvents.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
-      const timestamps = prEvents.map((e) => new Date(e.created_at).getTime());
-      const oldestEvent = Math.min(...timestamps);
-      const newestEvent = Math.max(...timestamps);
-      const eventSpanDays = Math.max(
-        1,
-        Math.round((newestEvent - oldestEvent) / (1000 * 60 * 60 * 24)),
-      );
-      const prsPerDay = prEvents.length / eventSpanDays;
-      if (prsPerDay >= CONFIG.ACTIVITY_DENSITY_EXTREME / 2) {
-        // PRs are much rarer
-        flags.push({
-          label: "Extremely high PR rate",
-          points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY + 10,
-          detail: `${prEvents.length} PRs in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
-        });
-      } else if (prsPerDay >= CONFIG.ACTIVITY_DENSITY_HIGH / 2) {
-        flags.push({
-          label: "High PR rate",
-          points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY + 5,
-          detail: `${prEvents.length} PRs in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
-        });
       }
     }
 
@@ -166,12 +198,11 @@ export function identifyReplicant(
       daysWithManyHours.sort();
       let consecutiveCount = 1;
       let maxConsecutive = 1;
-
       for (let i = 1; i < daysWithManyHours.length; i++) {
-        const prev = new Date(daysWithManyHours[i - 1]!);
-        const curr = new Date(daysWithManyHours[i]!);
-        const diffDays =
-          (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+        const prev = dayjs(daysWithManyHours[i - 1]);
+        const curr = dayjs(daysWithManyHours[i]);
+        const diffDays = curr.diff(prev, "day");
+
         if (diffDays === 1) {
           consecutiveCount++;
           maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
@@ -199,19 +230,22 @@ export function identifyReplicant(
     // Consecutive days activity
     // working non-stop
     const daySet = new Set<string>();
-    const timestamps = events.map((e) => new Date(e.created_at));
-    timestamps.forEach((t) => daySet.add(t.toISOString().slice(0, 10)));
+    events.forEach((e) => {
+      daySet.add(dayjs(e.created_at).format("YYYY-MM-DD"));
+    });
 
-    const sortedDays = [...daySet].sort();
+    const sortedDays = Array.from(daySet)
+      .map((d) => dayjs(d, "YYYY-MM-DD"))
+      .sort((a, b) => a.valueOf() - b.valueOf());
 
     let maxStreak = 1;
     let currentStreak = 1;
+
     for (let i = 1; i < sortedDays.length; i++) {
-      const prev = new Date(sortedDays[i - 1]!);
-      const curr = new Date(sortedDays[i]!);
-      const diffDays =
-        (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
-      if (diffDays === 1) {
+      const prev = sortedDays[i - 1];
+      const curr = sortedDays[i];
+
+      if (curr.diff(prev, "day") === 1) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);
       } else {
@@ -258,22 +292,21 @@ export function identifyReplicant(
 
     // External PRs
     // check frequency, not just total
-
     const externalPRs = prEvents.filter((e) => {
       const repoOwner = e.repo?.name.split("/")[0]?.toLowerCase();
       return repoOwner && repoOwner !== userLogin;
     });
 
     // Group PRs by day and week
-    const now = Date.now();
-    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
-    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+    const now = dayjs();
+    const oneWeekAgo = now.subtract(1, "week");
+    const oneDayAgo = now.subtract(1, "day");
 
-    const prsThisWeek = externalPRs.filter(
-      (e) => new Date(e.created_at).getTime() > oneWeekAgo,
+    const prsThisWeek = externalPRs.filter((e) =>
+      dayjs(e.created_at).isAfter(oneWeekAgo),
     );
-    const prsToday = externalPRs.filter(
-      (e) => new Date(e.created_at).getTime() > oneDayAgo,
+    const prsToday = externalPRs.filter((e) =>
+      dayjs(e.created_at).isAfter(oneDayAgo),
     );
 
     // Many PRs in a single day
