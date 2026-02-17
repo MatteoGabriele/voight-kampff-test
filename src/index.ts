@@ -1,5 +1,31 @@
-import type { GitHubEvent, GitHubUser } from "./types";
 import { CONFIG } from "./config";
+
+export interface GitHubUser {
+  login: string;
+  avatar_url: string;
+  name: string | null;
+  bio: string | null;
+  public_repos: number;
+  followers: number;
+  following: number;
+  created_at: string;
+}
+
+export interface GitHubEvent {
+  type: string;
+  created_at: string;
+  repo?: { name: string };
+  payload?: {
+    commits?: Array<{ message: string }>;
+    pull_request?: { title: string; body: string | null };
+    issue?: { title: string; body: string | null };
+  };
+}
+
+export interface GitHubRepo {
+  fork: boolean
+  name: string
+}
 
 export interface IdentifyReplicantResult {
   score: number;
@@ -16,8 +42,11 @@ export interface IdentifyReplicantResult {
 export function identifyReplicant(
   user: GitHubUser,
   events: GitHubEvent[],
+  repos: GitHubRepo[]
 ): IdentifyReplicantResult {
   const flags: Array<{ label: string; points: number; detail: string }> = [];
+  const onlyOwnedRepos = repos.filter((repo) => !repo.fork)
+  const onlyOwnedReposCount = onlyOwnedRepos.length
 
   // Coding event types used throughout (commits and PRs)
   const codingEventTypes = new Set(["PushEvent", "PullRequestEvent"]);
@@ -54,9 +83,11 @@ export function identifyReplicant(
     const repoOwner = e.repo?.name.split("/")[0]?.toLowerCase();
     return repoOwner && repoOwner !== user.login.toLowerCase();
   });
+
   const allExternal =
-    user.public_repos === 0 && foreignEvents.length === events.length;
-  if (allExternal && events.length >= CONFIG.ZERO_REPOS_MIN_EVENTS) {
+    onlyOwnedReposCount === 0 && foreignEvents.length === events.length;
+  
+    if (allExternal && events.length >= CONFIG.ZERO_REPOS_MIN_EVENTS) {
     flags.push({
       label: "Only active on other people's repos",
       points:
@@ -324,10 +355,10 @@ export function identifyReplicant(
     // Also flag if lots of PRs AND few personal repos (regardless of time)
     if (
       externalPRs.length >= CONFIG.EXTERNAL_PRS_MIN &&
-      user.public_repos < CONFIG.PERSONAL_REPOS_LOW
+      onlyOwnedReposCount < CONFIG.PERSONAL_REPOS_LOW
     ) {
-      let detail = `${externalPRs.length} PRs to other repos, but only ${user.public_repos} of their own`;
-      if (user.public_repos === 0) {
+      let detail = `${externalPRs.length} PRs to other repos, but only ${onlyOwnedReposCount} of their own`;
+      if (onlyOwnedReposCount === 0) {
         detail = `${externalPRs.length} PRs to other repos, none of their own`;
       }
 
@@ -343,7 +374,7 @@ export function identifyReplicant(
     if (
       !allExternal &&
       foreignRatio >= CONFIG.FOREIGN_RATIO_HIGH &&
-      user.public_repos < CONFIG.PERSONAL_REPOS_LOW
+      onlyOwnedReposCount < CONFIG.PERSONAL_REPOS_LOW
     ) {
       flags.push({
         label: "Mostly external activity",
@@ -372,7 +403,7 @@ export function identifyReplicant(
     profile: {
       age: ageDays,
       followers: user.followers,
-      repos: user.public_repos,
+      repos: onlyOwnedReposCount,
       hasIdentity,
     },
   };
