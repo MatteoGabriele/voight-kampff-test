@@ -1,6 +1,6 @@
 # voight-kampff-test
 
-Programmatically detect humans, agents, and suspicious account on Github.
+Identifying potential automation patterns in GitHub accounts
 
 This is the core logic behind [AgentScan](https://agentscan.netlify.app), an app I didn’t expect to build, but ended up creating after reading [this article](https://socket.dev/blog/ai-agent-lands-prs-in-major-oss-projects-targets-maintainers-via-cold-outreach) about open source projects being targeted by AI agents.
 
