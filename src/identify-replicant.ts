@@ -5,7 +5,6 @@ dayjs.extend(minMax);
 
 import type {
   GitHubEvent,
-  GitHubRepo,
   GitHubUser,
   IdentifyFlag,
   IdentifyReplicantResult,
@@ -15,12 +14,9 @@ import type {
 export function identifyReplicant(
   user: GitHubUser,
   events: GitHubEvent[],
-  repos: GitHubRepo[],
 ): IdentifyReplicantResult {
   const flags: IdentifyFlag[] = [];
-
-  const onlyOwnedRepos = repos.filter((repo) => !repo.fork);
-  const onlyOwnedReposCount = onlyOwnedRepos.length;
+  const reposCount = user.public_repos;
 
   const accountAge = dayjs().diff(user.created_at, "days");
 
@@ -44,7 +40,7 @@ export function identifyReplicant(
   });
 
   const hasAllExternal =
-    onlyOwnedReposCount === 0 && foreignEvents.length === events.length;
+    reposCount === 0 && foreignEvents.length === events.length;
 
   if (hasAllExternal && events.length >= CONFIG.ZERO_REPOS_MIN_EVENTS) {
     flags.push({
@@ -329,10 +325,10 @@ export function identifyReplicant(
     // Also flag if lots of PRs AND few personal repos (regardless of time)
     if (
       externalPRs.length >= CONFIG.EXTERNAL_PRS_MIN &&
-      onlyOwnedReposCount < CONFIG.PERSONAL_REPOS_LOW
+      reposCount < CONFIG.PERSONAL_REPOS_LOW
     ) {
-      let detail = `${externalPRs.length} PRs to other repos, but only ${onlyOwnedReposCount} of their own`;
-      if (onlyOwnedReposCount === 0) {
+      let detail = `${externalPRs.length} PRs to other repos, but only ${reposCount} of their own`;
+      if (reposCount === 0) {
         detail = `${externalPRs.length} PRs to other repos, none of their own`;
       }
 
@@ -348,7 +344,7 @@ export function identifyReplicant(
     if (
       !hasAllExternal &&
       foreignRatio >= CONFIG.FOREIGN_RATIO_HIGH &&
-      onlyOwnedReposCount < CONFIG.PERSONAL_REPOS_LOW
+      reposCount < CONFIG.PERSONAL_REPOS_LOW
     ) {
       flags.push({
         label: "Mostly external activity",
@@ -377,7 +373,7 @@ export function identifyReplicant(
     profile: {
       age: accountAge,
       followers: user.followers,
-      repos: onlyOwnedReposCount,
+      repos: reposCount,
     },
   };
 }

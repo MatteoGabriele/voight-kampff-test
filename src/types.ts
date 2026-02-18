@@ -20,11 +20,6 @@ export type GitHubEvent = {
   };
 };
 
-export type GitHubRepo = {
-  fork: boolean;
-  name: string;
-};
-
 export type IdentifyFlag = {
   label: string;
   points: number;
