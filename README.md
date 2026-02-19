@@ -22,9 +22,8 @@ import { identifyReplicant } from "voight-kampff-test";
 
 const user = {}; // <-- `https://api.github.com/users/${username}`
 const events = []; // <-- `https://api.github.com/users/${username}/events?per_page=100`
-const repos = []; // <-- `https://api.github.com/users/${username}/repos`
 
-const analysis = identifyReplicant(user, events, repos);
+const analysis = identifyReplicant(user, events);
 ```
 
 <img width="657" height="832" alt="Screenshot 2026-02-16 at 21 14 29" src="https://github.com/user-attachments/assets/8a616904-6459-4fd9-9d8f-9284bf9d1e29" />
