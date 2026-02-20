@@ -164,7 +164,7 @@ export function identifyReplicant(
     const codingEventTypes = new Set(["PushEvent", "PullRequestEvent"]);
     const codingEventsWithReviews = events.filter(
       (e) =>
-        codingEventTypes.has(e.type) ||
+        (e.type && codingEventTypes.has(e.type)) ||
         e.type === "PullRequestReviewEvent" ||
         e.type === "PullRequestReviewCommentEvent",
     );
@@ -173,6 +173,10 @@ export function identifyReplicant(
     // many hours of coding in a day, happening day after day
     const codingEventsByDay = new Map<string, Date[]>();
     codingEventsWithReviews.forEach((e) => {
+      if (!e.created_at) {
+        return;
+      }
+
       const t = new Date(e.created_at);
       const day = t.toISOString().slice(0, 10);
       if (!codingEventsByDay.has(day)) codingEventsByDay.set(day, []);

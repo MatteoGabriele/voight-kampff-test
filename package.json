@@ -31,6 +31,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "devDependencies": {
+    "@octokit/types": "^16.0.0",
     "@types/node": "^25.0.3",
     "bumpp": "^10.3.2",
     "publint": "^0.3.17",

@@ -1,24 +1,9 @@
-export type GitHubUser = {
-  login: string;
-  avatar_url: string;
-  name: string | null;
-  bio: string | null;
-  public_repos: number;
-  followers: number;
-  following: number;
-  created_at: string;
-};
+import type { Endpoints } from "@octokit/types";
 
-export type GitHubEvent = {
-  type: string;
-  created_at: string;
-  repo?: { name: string };
-  payload?: {
-    commits?: Array<{ message: string }>;
-    pull_request?: { title: string; body: string | null };
-    issue?: { title: string; body: string | null };
-  };
-};
+export type GitHubUser = Endpoints["GET /users/{username}"]["response"]["data"];
+
+export type GitHubEvent =
+  Endpoints["GET /users/{username}/events/public"]["response"]["data"][number];
 
 export type IdentifyFlag = {
   label: string;
