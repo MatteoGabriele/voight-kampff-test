@@ -1,24 +1,25 @@
 import { CONFIG } from "./config";
 import dayjs from "dayjs";
 import minMax from "dayjs/plugin/minMax";
+
 dayjs.extend(minMax);
 
 import type {
-  GitHubEvent,
-  GitHubUser,
   IdentifyFlag,
+  IdentifyReplicantOptions,
   IdentifyReplicantResult,
   IdentityClassification,
 } from "./types";
 
-export function identifyReplicant(
-  user: GitHubUser,
-  events: GitHubEvent[],
-): IdentifyReplicantResult {
+export function identifyReplicant({
+  createdAt,
+  reposCount,
+  accountName,
+  events,
+}: IdentifyReplicantOptions): IdentifyReplicantResult {
   const flags: IdentifyFlag[] = [];
-  const reposCount = user.public_repos;
 
-  const accountAge = dayjs().diff(user.created_at, "days");
+  const accountAge = dayjs().diff(createdAt, "days");
 
   if (accountAge < CONFIG.AGE_NEW_ACCOUNT) {
     flags.push({
@@ -35,8 +36,8 @@ export function identifyReplicant(
   }
 
   const foreignEvents = events.filter((e) => {
-    const repoOwner = e.repo?.name.split("/")[0]?.toLowerCase();
-    return repoOwner && repoOwner !== user.login.toLowerCase();
+    const repoOwner = e.repo?.name?.split("/")[0]?.toLowerCase();
+    return repoOwner && repoOwner !== accountName.toLowerCase();
   });
 
   const hasAllExternal =
@@ -53,9 +54,139 @@ export function identifyReplicant(
 
   const isNewOrYoungAccount = accountAge < CONFIG.AGE_YOUNG_ACCOUNT;
 
+  // Behavioral pattern checks (apply to all accounts regardless of age)
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const createEvents = events.filter((e) => e.type === "CreateEvent");
+
+    // Rapid repo creation burst (CreateEvent clustering)
+    if (createEvents.length >= CONFIG.CREATE_EVENTS_MIN) {
+      const createTimestamps = createEvents
+        .map((e) => dayjs(e.created_at))
+        .sort((a, b) => a.valueOf() - b.valueOf());
+
+      // Check for repo creation clustering (multiple repos in short time window)
+      let maxCreatesInWindow = 0;
+      let windowStartIdx = 0;
+
+      for (let endIdx = 0; endIdx < createTimestamps.length; endIdx++) {
+        const windowEnd = createTimestamps[endIdx];
+
+        // Slide window to include only events within 24 hours
+        while (
+          windowEnd &&
+          windowEnd.diff(createTimestamps[windowStartIdx], "hour", true) > 24
+        ) {
+          windowStartIdx++;
+        }
+
+        const createsInWindow = endIdx - windowStartIdx + 1;
+        maxCreatesInWindow = Math.max(maxCreatesInWindow, createsInWindow);
+      }
+
+      if (maxCreatesInWindow >= CONFIG.CREATE_BURST_EXTREME) {
+        flags.push({
+          label: "Concentrated repository creation",
+          points: CONFIG.POINTS_CREATE_BURST_EXTREME,
+          detail: `${maxCreatesInWindow} repositories created in a short timeframe (within 24 hours)`,
+        });
+      } else if (maxCreatesInWindow >= CONFIG.CREATE_BURST_HIGH) {
+        flags.push({
+          label: "Frequent repository creation",
+          points: CONFIG.POINTS_CREATE_BURST_HIGH,
+          detail: `${maxCreatesInWindow} repositories created in a short timeframe (within 24 hours)`,
+        });
+      }
+    }
+
+    // 24/7 activity pattern (no sleep, bot-like consistency) - IMPROVED
+    const activityByHour = new Map<number, number>();
+    events.forEach((e) => {
+      const hour = dayjs(e.created_at).hour();
+      activityByHour.set(hour, (activityByHour.get(hour) || 0) + 1);
+    });
+
+    if (events.length > 0 && activityByHour.size > 0) {
+      const activeHours = activityByHour.size;
+      const eventCounts = Array.from(activityByHour.values());
+      const avgEventsPerHour = events.length / activeHours;
+
+      // Calculate standard deviation to detect uniform distribution
+      const mean = avgEventsPerHour;
+      const variance =
+        eventCounts.reduce((sum, count) => sum + Math.pow(count - mean, 2), 0) /
+        eventCounts.length;
+      const stdDev = Math.sqrt(variance);
+      const coefficientOfVariation = stdDev / mean;
+
+      // Find largest rest gap (sleep window) - accounts for midnight wrap
+      const sortedHours = Array.from(activityByHour.keys()).sort(
+        (a, b) => a - b,
+      );
+      const firstHour = sortedHours[0];
+      const lastHour = sortedHours[sortedHours.length - 1];
+      let maxRestGap =
+        firstHour !== undefined && lastHour !== undefined
+          ? 24 - lastHour + firstHour
+          : 0;
+      for (let i = 0; i < sortedHours.length - 1; i++) {
+        const currentHour = sortedHours[i];
+        const nextHour = sortedHours[i + 1];
+        if (currentHour !== undefined && nextHour !== undefined) {
+          maxRestGap = Math.max(maxRestGap, nextHour - currentHour - 1);
+        }
+      }
+
+      // Bot-like patterns: suspicious uniform distribution OR no realistic rest window
+      const isSuspiciouslyUniform = coefficientOfVariation < 0.3;
+      const hasMinimalRest = maxRestGap < 3;
+      const meetsEventThreshold =
+        avgEventsPerHour >= CONFIG.EVENTS_PER_HOUR_MIN;
+
+      if (
+        activeHours >= CONFIG.HOURS_ACTIVE_EXTREME &&
+        meetsEventThreshold &&
+        (isSuspiciouslyUniform || hasMinimalRest)
+      ) {
+        let points: number = CONFIG.POINTS_24_7_ACTIVITY;
+        // Increase severity if both uniform AND minimal rest
+        if (isSuspiciouslyUniform && hasMinimalRest) {
+          points = Math.round(points * 1.5);
+        }
+
+        flags.push({
+          label: "24/7 activity pattern",
+          points,
+          detail: `Active ${activeHours}/24 hours, ${maxRestGap}h max rest, ${avgEventsPerHour.toFixed(1)} events/hour`,
+        });
+      }
+    }
+    // Event type diversity check (bots often have limited activity types)
+    const eventTypes = new Set(events.map((e) => e.type));
+    const hasInteraction =
+      eventTypes.has("IssueCommentEvent") ||
+      eventTypes.has("PullRequestReviewEvent") ||
+      eventTypes.has("PullRequestReviewCommentEvent");
+    const hasWatches = eventTypes.has("WatchEvent");
+
+    // Pure automation indicator: only create/push events, no human interaction
+    if (
+      eventTypes.size <= CONFIG.EVENT_TYPE_DIVERSITY_MIN &&
+      !hasInteraction &&
+      !hasWatches
+    ) {
+      flags.push({
+        label: "Narrow activity focus",
+        points: CONFIG.POINTS_LOW_DIVERSITY,
+        detail: `Activity concentrated on ${eventTypes.size} specific event types without interpersonal interactions`,
+      });
+    }
+  }
+
+  // Additional checks for young accounts (more strict thresholds)
   if (isNewOrYoungAccount && events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const userLogin = accountName.toLowerCase();
+
     const commitEvents = events.filter((e) => e.type === "PushEvent");
-    const userLogin = user.login.toLowerCase();
 
     if (commitEvents.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
       const timestamps = commitEvents
@@ -73,7 +204,10 @@ export function identifyReplicant(
         const windowEnd = timestamps[windowEndIndex];
 
         // Slide window start forward until within 1 hour
-        while (windowEnd.diff(timestamps[windowStartIndex], "hour", true) > 1) {
+        while (
+          windowEnd &&
+          windowEnd.diff(timestamps[windowStartIndex], "hour", true) > 1
+        ) {
           windowStartIndex++;
         }
 
@@ -99,16 +233,18 @@ export function identifyReplicant(
       let tightBurstCount = 0;
 
       for (let i = 1; i < timestamps.length; i++) {
-        const diffSeconds = timestamps[i].diff(timestamps[i - 1], "second");
+        if (timestamps[i] !== undefined && timestamps[i - 1] !== undefined) {
+          const diffSeconds = timestamps[i]!.diff(timestamps[i - 1]!, "second");
 
-        if (diffSeconds <= CONFIG.TIGHT_COMMIT_SECONDS) {
-          tightBurstCount++;
+          if (diffSeconds <= CONFIG.TIGHT_COMMIT_SECONDS) {
+            tightBurstCount++;
+          }
         }
       }
 
       if (tightBurstCount >= CONFIG.TIGHT_COMMIT_THRESHOLD) {
         flags.push({
-          label: "Commits too tightly spaced",
+          label: "High commit frequency",
           points: CONFIG.POINTS_TIGHT_BURST,
           detail: `${tightBurstCount + 1} commits within very short intervals`,
         });
@@ -130,13 +266,13 @@ export function identifyReplicant(
         if (prsPerDay >= CONFIG.ACTIVITY_DENSITY_EXTREME / 2) {
           // PRs are much rarer
           flags.push({
-            label: "Extremely high PR rate",
+            label: "Very high PR volume",
             points: CONFIG.POINTS_EXTREME_ACTIVITY_DENSITY + 10,
             detail: `${prEvents.length} PRs in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
           });
         } else if (prsPerDay >= CONFIG.ACTIVITY_DENSITY_HIGH / 2) {
           flags.push({
-            label: "High PR rate",
+            label: "High PR volume",
             points: CONFIG.POINTS_HIGH_ACTIVITY_DENSITY + 5,
             detail: `${prEvents.length} PRs in ${eventSpanDays} day${eventSpanDays === 1 ? "" : "s"}`,
           });
@@ -245,7 +381,7 @@ export function identifyReplicant(
       const prev = sortedDays[i - 1];
       const curr = sortedDays[i];
 
-      if (curr.diff(prev, "day") === 1) {
+      if (curr && prev && curr.diff(prev, "day") === 1) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);
       } else {
@@ -277,15 +413,15 @@ export function identifyReplicant(
 
       if (externalRepos.size >= CONFIG.REPO_SPREAD_EXTREME) {
         flags.push({
-          label: "Very wide contribution spread",
+          label: "Highly distributed activity",
           points: CONFIG.POINTS_EXTREME_REPO_SPREAD_YOUNG,
-          detail: `Active in ${externalRepos.size} repos they don't own`,
+          detail: `Activity spread across ${externalRepos.size} external repositories`,
         });
       } else if (externalRepos.size >= CONFIG.REPO_SPREAD_HIGH) {
         flags.push({
-          label: "Wide contribution spread",
+          label: "Distributed activity",
           points: CONFIG.POINTS_WIDE_REPO_SPREAD_YOUNG,
-          detail: `Active in ${externalRepos.size} repos they don't own`,
+          detail: `Activity spread across ${externalRepos.size} external repositories`,
         });
       }
     }
@@ -293,7 +429,7 @@ export function identifyReplicant(
     // External PRs
     // check frequency, not just total
     const externalPRs = prEvents.filter((e) => {
-      const repoOwner = e.repo?.name.split("/")[0]?.toLowerCase();
+      const repoOwner = e.repo?.name?.split("/")[0]?.toLowerCase();
       return repoOwner && repoOwner !== userLogin;
     });
 
@@ -363,11 +499,11 @@ export function identifyReplicant(
   const humanScore = Math.max(0, 100 - score);
 
   // Classification based on inverted score
-  let classification: IdentityClassification = "likely_bot";
+  let classification: IdentityClassification = "automation";
   if (humanScore >= CONFIG.THRESHOLD_HUMAN) {
-    classification = "human";
+    classification = "organic";
   } else if (humanScore >= CONFIG.THRESHOLD_SUSPICIOUS) {
-    classification = "suspicious";
+    classification = "mixed";
   }
 
   return {
@@ -376,7 +512,6 @@ export function identifyReplicant(
     flags,
     profile: {
       age: accountAge,
-      followers: user.followers,
       repos: reposCount,
     },
   };

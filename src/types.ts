@@ -11,7 +11,14 @@ export type IdentifyFlag = {
   detail: string;
 };
 
-export type IdentityClassification = "human" | "suspicious" | "likely_bot";
+export type IdentifyReplicantOptions = {
+  createdAt: string;
+  reposCount: number;
+  accountName: string;
+  events: GitHubEvent[];
+};
+
+export type IdentityClassification = "organic" | "mixed" | "automation";
 
 export type IdentifyReplicantResult = {
   score: number;
@@ -19,7 +26,6 @@ export type IdentifyReplicantResult = {
   flags: IdentifyFlag[];
   profile: {
     age: number;
-    followers: number;
     repos: number;
   };
 };
