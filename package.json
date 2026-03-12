@@ -28,18 +28,16 @@
     "dev": "tsdown --watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run test && pnpm run build"
   },
   "devDependencies": {
     "@octokit/types": "^16.0.0",
     "@types/node": "^25.0.3",
     "bumpp": "^10.3.2",
+    "dayjs": "^1.11.20",
     "publint": "^0.3.17",
     "tsdown": "^0.18.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
-  },
-  "dependencies": {
-    "dayjs": "^1.11.19"
   }
 }
