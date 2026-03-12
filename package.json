@@ -28,7 +28,7 @@
     "dev": "tsdown --watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm run test && pnpm run build"
+    "prepublishOnly": "vitest --run && pnpm run build"
   },
   "devDependencies": {
     "@octokit/types": "^16.0.0",
