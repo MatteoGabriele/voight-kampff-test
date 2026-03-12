@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Organic signals > analysis 'automation 1' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 4576,
+    "repos": 27,
+  },
+  "score": 100,
+}
+`;
+
+exports[`Organic signals > analysis 'automation 2' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 3220,
+    "repos": 859,
+  },
+  "score": 100,
+}
+`;
