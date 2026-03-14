@@ -28,6 +28,7 @@
     "dev": "tsdown --watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
+    "add:fixture": "node scripts/fetch-github-events.js",
     "prepublishOnly": "vitest --run && pnpm run build"
   },
   "devDependencies": {

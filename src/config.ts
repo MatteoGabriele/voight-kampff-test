@@ -83,8 +83,8 @@ export const CONFIG = {
 
   // Rapid repo creation (bot-like behavior)
   CREATE_EVENTS_MIN: 5, // need at least this many repo creations to analyze
-  CREATE_BURST_EXTREME: 25, // >= 25 repos created in 24 hours = extreme automation
-  CREATE_BURST_HIGH: 15, // >= 15 repos created in 24 hours = suspicious
+  CREATE_BURST_EXTREME: 16, // >= 25 repos created in 24 hours = extreme automation
+  CREATE_BURST_HIGH: 8, // >= 15 repos created in 24 hours = suspicious
   POINTS_CREATE_BURST_EXTREME: 35,
   POINTS_CREATE_BURST_HIGH: 25,
 

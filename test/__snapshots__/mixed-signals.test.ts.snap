@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Mixed signals > analysis 'automation 1' 1`] = `
+{
+  "classification": "mixed",
+  "flags": [
+    {
+      "detail": "20 repositories created in a short timeframe (within 24 hours)",
+      "label": "Concentrated repository creation",
+      "points": 35,
+    },
+  ],
+  "profile": {
+    "age": 1096,
+    "repos": 134,
+  },
+  "score": 65,
+}
+`;
