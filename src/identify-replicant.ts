@@ -180,6 +180,101 @@ export function identifyReplicant({
         detail: `Activity concentrated on ${eventTypes.size} specific event types without interpersonal interactions`,
       });
     }
+
+    // Issue comment spam detection (multiple comments across different repos in short time)
+    const issueCommentEvents = events.filter(
+      (e) => e.type === "IssueCommentEvent",
+    );
+
+    if (issueCommentEvents.length >= CONFIG.ISSUE_COMMENT_MIN_FOR_SPRAY) {
+      // Sort by timestamp
+      const commentTimestamps = issueCommentEvents
+        .map((e) => ({ event: e, time: dayjs(e.created_at) }))
+        .sort((a, b) => a.time.valueOf() - b.time.valueOf());
+
+      // Find the densest window of activity
+      let maxDistinctReposInWindow = 0;
+      let maxReposWindowStartIdx = 0;
+      let maxReposWindowEndIdx = 0;
+      let windowStartIdx = 0;
+      const windowMinutes = CONFIG.ISSUE_COMMENT_SPAM_WINDOW_MINUTES;
+
+      for (
+        let windowEndIdx = 0;
+        windowEndIdx < commentTimestamps.length;
+        windowEndIdx++
+      ) {
+        const windowEnd = commentTimestamps[windowEndIdx]?.time;
+
+        // Slide window start forward until within the time window
+        while (
+          commentTimestamps[windowStartIdx] &&
+          windowEnd &&
+          windowEnd.diff(
+            commentTimestamps[windowStartIdx]!.time,
+            "minute",
+            true,
+          ) > windowMinutes
+        ) {
+          windowStartIdx++;
+        }
+
+        // Count distinct repos in this time window
+        const reposInWindow = new Set(
+          commentTimestamps
+            .slice(windowStartIdx, windowEndIdx + 1)
+            .map((item) => item.event.repo?.name)
+            .filter((name): name is string => name !== undefined),
+        );
+
+        if (reposInWindow.size > maxDistinctReposInWindow) {
+          maxDistinctReposInWindow = reposInWindow.size;
+          maxReposWindowStartIdx = windowStartIdx;
+          maxReposWindowEndIdx = windowEndIdx;
+        }
+      }
+
+      // Flag if comments are being sprayed across many repos
+      if (maxDistinctReposInWindow >= CONFIG.ISSUE_COMMENT_SPRAY_EXTREME) {
+        const windowStart = commentTimestamps[maxReposWindowStartIdx]?.time;
+        const windowEnd = commentTimestamps[maxReposWindowEndIdx]?.time;
+        const commentsInWindow =
+          maxReposWindowEndIdx - maxReposWindowStartIdx + 1;
+        const timeSpanMinutes =
+          windowEnd && windowStart
+            ? Math.round(windowEnd.diff(windowStart, "minute", true) * 10) / 10
+            : 0;
+        const commentsPerMinute =
+          timeSpanMinutes > 0
+            ? Math.round((commentsInWindow / timeSpanMinutes) * 10) / 10
+            : commentsInWindow;
+
+        flags.push({
+          label: "Issue comment spam",
+          points: CONFIG.POINTS_ISSUE_COMMENT_SPRAY_EXTREME,
+          detail: `${commentsInWindow} comments to ${maxDistinctReposInWindow} different repos in ${timeSpanMinutes} minutes (${commentsPerMinute} comments/min)`,
+        });
+      } else if (maxDistinctReposInWindow >= CONFIG.ISSUE_COMMENT_SPRAY_HIGH) {
+        const windowStart = commentTimestamps[maxReposWindowStartIdx]?.time;
+        const windowEnd = commentTimestamps[maxReposWindowEndIdx]?.time;
+        const commentsInWindow =
+          maxReposWindowEndIdx - maxReposWindowStartIdx + 1;
+        const timeSpanMinutes =
+          windowEnd && windowStart
+            ? Math.round(windowEnd.diff(windowStart, "minute", true) * 10) / 10
+            : 0;
+        const commentsPerMinute =
+          timeSpanMinutes > 0
+            ? Math.round((commentsInWindow / timeSpanMinutes) * 10) / 10
+            : commentsInWindow;
+
+        flags.push({
+          label: "High comment frequency across repos",
+          points: CONFIG.POINTS_ISSUE_COMMENT_SPRAY_HIGH,
+          detail: `${commentsInWindow} comments to ${maxDistinctReposInWindow} different repos in ${timeSpanMinutes} minutes (${commentsPerMinute} comments/min)`,
+        });
+      }
+    }
   }
 
   // Additional checks for young accounts (more strict thresholds)

@@ -4,7 +4,7 @@ import { getFixtures } from "./utils/get-fixtures";
 
 const date = new Date(2026, 2, 10, 12);
 
-describe("Organic signals", () => {
+describe("Signals", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -13,7 +13,7 @@ describe("Organic signals", () => {
     vi.useRealTimers();
   });
 
-  it.each(getFixtures("organic"))("analysis $1", (fixture) => {
+  it.each(getFixtures())("analysis $1", (fixture) => {
     vi.setSystemTime(date);
 
     const identity = identifyReplicant({

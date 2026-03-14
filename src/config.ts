@@ -96,4 +96,12 @@ export const CONFIG = {
   // Event type diversity (bots have narrow activity)
   EVENT_TYPE_DIVERSITY_MIN: 2, // <= 2 event types = very limited diversity
   POINTS_LOW_DIVERSITY: 20,
+
+  // Issue comment spam (multiple comments to different repos in short timeframe)
+  ISSUE_COMMENT_SPAM_WINDOW_MINUTES: 2, // time window to group comments
+  ISSUE_COMMENT_SPRAY_EXTREME: 15, // >= this different repos = comment spray bot
+  ISSUE_COMMENT_SPRAY_HIGH: 10, // >= this different repos in short window = suspicious
+  ISSUE_COMMENT_MIN_FOR_SPRAY: 10, // need at least this many comments to analyze
+  POINTS_ISSUE_COMMENT_SPRAY_EXTREME: 40,
+  POINTS_ISSUE_COMMENT_SPRAY_HIGH: 30,
 } as const;

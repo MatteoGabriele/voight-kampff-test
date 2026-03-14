@@ -49,7 +49,7 @@ async function fetchGitHubEvents(username, type = "automation") {
 
   const userUrl = `https://api.github.com/users/${username}`;
   const eventsUrl = `https://api.github.com/users/${username}/events?per_page=100`;
-  const outputDir = path.join(__dirname, "..", "test", "fixtures", type);
+  const outputDir = path.join(__dirname, "..", "test", "fixtures");
 
   try {
     console.log(`Fetching data for user: ${username}`);
