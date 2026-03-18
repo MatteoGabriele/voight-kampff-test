@@ -81,17 +81,17 @@ export const CONFIG = {
   TIGHT_COMMIT_THRESHOLD: 3,
   POINTS_TIGHT_BURST: 25,
 
-  // Rapid repo creation (bot-like behavior)
+  // Rapid repo creation (filters CreateEvent by ref_type === "repository" only)
   CREATE_EVENTS_MIN: 5, // need at least this many repo creations to analyze
-  CREATE_BURST_EXTREME: 16, // >= 25 repos created in 24 hours = extreme automation
-  CREATE_BURST_HIGH: 8, // >= 15 repos created in 24 hours = suspicious
+  CREATE_BURST_EXTREME: 16, // >= 16 repos created in 24 hours = extreme automation
+  CREATE_BURST_HIGH: 8, // >= 8 repos created in 24 hours = suspicious
   POINTS_CREATE_BURST_EXTREME: 35,
   POINTS_CREATE_BURST_HIGH: 25,
 
-  // 24/7 activity pattern (no sleep)
-  HOURS_ACTIVE_EXTREME: 18, // activity across 17+ hours = suspicious (no natural sleep)
-  EVENTS_PER_HOUR_MIN: 1.5, // minimum events per active hour for 24/7 pattern
-  POINTS_24_7_ACTIVITY: 30,
+  // 24/7 activity pattern (no sleep) - adjusted for fewer false positives
+  HOURS_ACTIVE_EXTREME: 21, // activity across 21+ hours = suspicious (no realistic sleep)
+  EVENTS_PER_HOUR_MIN: 2.0, // minimum events per active hour for 24/7 pattern
+  POINTS_24_7_ACTIVITY: 25,
 
   // Event type diversity (bots have narrow activity)
   EVENT_TYPE_DIVERSITY_MIN: 2, // <= 2 event types = very limited diversity

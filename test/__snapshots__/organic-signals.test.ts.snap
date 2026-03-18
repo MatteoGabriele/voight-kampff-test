@@ -1,61 +1,47 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Signals > analysis 'automation/alexaurora' 1`] = `
+exports[`Signals > analysis 'automation/dallasemard' 1`] = `
 {
-  "classification": "organic",
-  "flags": [],
-  "profile": {
-    "age": 1372,
-    "repos": 114,
-  },
-  "score": 100,
-}
-`;
-
-exports[`Signals > analysis 'automation/blakebeacon' 1`] = `
-{
-  "classification": "automation",
+  "classification": "mixed",
   "flags": [
     {
-      "detail": "Account is 36 days old",
+      "detail": "Account is 37 days old",
       "label": "Young account",
       "points": 10,
     },
     {
-      "detail": "15 repositories created in a short timeframe (within 24 hours)",
-      "label": "Frequent repository creation",
-      "points": 25,
-    },
-    {
-      "detail": "Active 23/24 hours, 1h max rest, 4.3 events/hour",
-      "label": "24/7 activity pattern",
-      "points": 30,
-    },
-    {
-      "detail": "4 commits within very short intervals",
+      "detail": "11 commits within very short intervals",
       "label": "High commit frequency",
       "points": 25,
     },
-    {
-      "detail": "16 repos forked recently",
-      "label": "Many recent forks",
-      "points": 30,
-    },
-    {
-      "detail": "Activity spread across 55 external repositories",
-      "label": "Highly distributed activity",
-      "points": 30,
-    },
   ],
   "profile": {
-    "age": 36,
-    "repos": 106,
+    "age": 37,
+    "repos": 33,
   },
-  "score": 0,
+  "score": 65,
 }
 `;
 
-exports[`Signals > analysis 'automation/caseycomet' 1`] = `
+exports[`Signals > analysis 'automation/leebogisich' 1`] = `
+{
+  "classification": "mixed",
+  "flags": [
+    {
+      "detail": "21 comments to 21 different repos in 1.3 minutes (16.2 comments/min)",
+      "label": "Issue comment spam",
+      "points": 40,
+    },
+  ],
+  "profile": {
+    "age": 1096,
+    "repos": 134,
+  },
+  "score": 60,
+}
+`;
+
+exports[`Signals > analysis 'automation/marshalltreutel' 1`] = `
 {
   "classification": "automation",
   "flags": [
@@ -65,14 +51,9 @@ exports[`Signals > analysis 'automation/caseycomet' 1`] = `
       "points": 10,
     },
     {
-      "detail": "6 commits within very short intervals",
+      "detail": "5 commits within very short intervals",
       "label": "High commit frequency",
       "points": 25,
-    },
-    {
-      "detail": "12 PRs in 1 day",
-      "label": "Very high PR volume",
-      "points": 35,
     },
     {
       "detail": "100% of activity on other people's repos",
@@ -84,62 +65,11 @@ exports[`Signals > analysis 'automation/caseycomet' 1`] = `
     "age": 33,
     "repos": 1,
   },
-  "score": 10,
-}
-`;
-
-exports[`Signals > analysis 'automation/drewdasher' 1`] = `
-{
-  "classification": "automation",
-  "flags": [
-    {
-      "detail": "Account is 37 days old",
-      "label": "Young account",
-      "points": 10,
-    },
-    {
-      "detail": "16 commits within very short intervals",
-      "label": "High commit frequency",
-      "points": 25,
-    },
-    {
-      "detail": "5 repos forked recently",
-      "label": "Multiple forks",
-      "points": 20,
-    },
-  ],
-  "profile": {
-    "age": 37,
-    "repos": 33,
-  },
   "score": 45,
 }
 `;
 
-exports[`Signals > analysis 'automation/emmaeclipse' 1`] = `
-{
-  "classification": "automation",
-  "flags": [
-    {
-      "detail": "20 repositories created in a short timeframe (within 24 hours)",
-      "label": "Concentrated repository creation",
-      "points": 35,
-    },
-    {
-      "detail": "21 comments to 21 different repos in 1.3 minutes (16.2 comments/min)",
-      "label": "Issue comment spam",
-      "points": 40,
-    },
-  ],
-  "profile": {
-    "age": 1096,
-    "repos": 134,
-  },
-  "score": 25,
-}
-`;
-
-exports[`Signals > analysis 'automation/henryh' 1`] = `
+exports[`Signals > analysis 'automation/raymondhowell' 1`] = `
 {
   "classification": "organic",
   "flags": [],
@@ -151,25 +81,37 @@ exports[`Signals > analysis 'automation/henryh' 1`] = `
 }
 `;
 
-exports[`Signals > analysis 'organic/finnfalcon' 1`] = `
-{
-  "classification": "organic",
-  "flags": [],
-  "profile": {
-    "age": 4576,
-    "repos": 27,
-  },
-  "score": 100,
-}
-`;
-
-exports[`Signals > analysis 'organic/georgiagravity' 1`] = `
+exports[`Signals > analysis 'user/jeannettebartoletti' 1`] = `
 {
   "classification": "organic",
   "flags": [],
   "profile": {
     "age": 3220,
     "repos": 859,
+  },
+  "score": 100,
+}
+`;
+
+exports[`Signals > analysis 'user/lauriemedhurst' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 5907,
+    "repos": 52,
+  },
+  "score": 100,
+}
+`;
+
+exports[`Signals > analysis 'user/michellehomenick' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 4576,
+    "repos": 29,
   },
   "score": 100,
 }

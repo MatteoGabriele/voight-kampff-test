@@ -34,9 +34,9 @@ function anonymizeData(user, events) {
   };
 
   const anonymousEvents = events.map((event) => ({
-    type: event.type,
-    created_at: event.created_at,
+    ...event,
     repo: {
+      ...event.repo,
       name: repoMapping[event.repo.name],
     },
   }));
@@ -52,7 +52,6 @@ async function fetchGitHubEvents(username, type = "automation") {
   }
 
   const userUrl = `https://api.github.com/users/${username}`;
-  const eventsUrl = `https://api.github.com/users/${username}/events?per_page=100`;
   const outputDir = path.join(__dirname, "..", "test", "fixtures");
 
   try {
@@ -75,22 +74,45 @@ async function fetchGitHubEvents(username, type = "automation") {
       public_repos: userData.public_repos,
     };
 
-    console.log(`Fetching events: ${eventsUrl}`);
-    const eventsResponse = await fetch(eventsUrl);
-    if (!eventsResponse.ok) {
-      throw new Error(
-        `GitHub API error: ${eventsResponse.status} ${eventsResponse.statusText}`,
-      );
-    }
-    const events = await eventsResponse.json();
+    const MIN_PAGE = 1;
+    const MAX_PAGE = 2;
 
-    const transformedEvents = events.map((event) => ({
-      type: event.type,
-      created_at: event.created_at,
-      repo: {
-        name: event.repo.name,
-      },
-    }));
+    // Fetch 2 pages of 100 events each (200 total)
+    console.log(
+      `Fetching events (page ${MIN_PAGE} and ${MAX_PAGE}, ${MAX_PAGE * 100} total)`,
+    );
+    const events = [];
+    for (let page = MIN_PAGE; page <= MAX_PAGE; page++) {
+      const eventsUrl = `https://api.github.com/users/${username}/events?per_page=100&page=${page}`;
+      const eventsResponse = await fetch(eventsUrl);
+      if (!eventsResponse.ok) {
+        throw new Error(
+          `GitHub API error: ${eventsResponse.status} ${eventsResponse.statusText}`,
+        );
+      }
+      const pageEvents = await eventsResponse.json();
+      if (pageEvents.length === 0) break; // Stop if no more events
+      events.push(...pageEvents);
+    }
+
+    const transformedEvents = events.map((event) => {
+      let newEvent = {
+        type: event.type,
+        created_at: event.created_at,
+        repo: {
+          name: event.repo.name,
+        },
+      };
+
+      if (event?.payload?.ref_type) {
+        newEvent = {
+          ...newEvent,
+          payload: { ref_type: event.payload.ref_type },
+        };
+      }
+
+      return newEvent;
+    });
 
     const { anonymousUser, anonymousEvents } = anonymizeData(
       user,

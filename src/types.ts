@@ -3,7 +3,12 @@ import type { Endpoints } from "@octokit/types";
 export type GitHubUser = Endpoints["GET /users/{username}"]["response"]["data"];
 
 export type GitHubEvent =
-  Endpoints["GET /users/{username}/events/public"]["response"]["data"][number];
+  Endpoints["GET /users/{username}/events/public"]["response"]["data"][number] & {
+    payload?: {
+      ref_type?: string;
+      [key: string]: unknown;
+    };
+  };
 
 export type IdentifyFlag = {
   label: string;

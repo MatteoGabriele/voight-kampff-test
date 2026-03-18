@@ -56,9 +56,12 @@ export function identifyReplicant({
 
   // Behavioral pattern checks (apply to all accounts regardless of age)
   if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
-    const createEvents = events.filter((e) => e.type === "CreateEvent");
+    // Filter CreateEvent to only actual repository creations (not branch/tag creation)
+    const createEvents = events.filter((e) => {
+      return e.type === "CreateEvent" && e.payload?.ref_type === "repository";
+    });
 
-    // Rapid repo creation burst (CreateEvent clustering)
+    // Rapid repo creation burst (real repository creation clustering)
     if (createEvents.length >= CONFIG.CREATE_EVENTS_MIN) {
       const createTimestamps = createEvents
         .map((e) => dayjs(e.created_at))
