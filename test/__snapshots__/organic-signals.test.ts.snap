@@ -1,6 +1,18 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Signals > analysis 'automation' 1`] = `
+exports[`Signals > analysis 'automation/alexaurora' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 1372,
+    "repos": 114,
+  },
+  "score": 100,
+}
+`;
+
+exports[`Signals > analysis 'automation/blakebeacon' 1`] = `
 {
   "classification": "automation",
   "flags": [
@@ -43,7 +55,7 @@ exports[`Signals > analysis 'automation' 1`] = `
 }
 `;
 
-exports[`Signals > analysis 'automation' 2`] = `
+exports[`Signals > analysis 'automation/caseycomet' 1`] = `
 {
   "classification": "automation",
   "flags": [
@@ -76,7 +88,7 @@ exports[`Signals > analysis 'automation' 2`] = `
 }
 `;
 
-exports[`Signals > analysis 'automation' 3`] = `
+exports[`Signals > analysis 'automation/drewdasher' 1`] = `
 {
   "classification": "automation",
   "flags": [
@@ -104,7 +116,7 @@ exports[`Signals > analysis 'automation' 3`] = `
 }
 `;
 
-exports[`Signals > analysis 'automation' 4`] = `
+exports[`Signals > analysis 'automation/emmaeclipse' 1`] = `
 {
   "classification": "automation",
   "flags": [
@@ -127,7 +139,7 @@ exports[`Signals > analysis 'automation' 4`] = `
 }
 `;
 
-exports[`Signals > analysis 'automation' 5`] = `
+exports[`Signals > analysis 'automation/henryh' 1`] = `
 {
   "classification": "organic",
   "flags": [],
@@ -139,7 +151,7 @@ exports[`Signals > analysis 'automation' 5`] = `
 }
 `;
 
-exports[`Signals > analysis 'organic' 1`] = `
+exports[`Signals > analysis 'organic/finnfalcon' 1`] = `
 {
   "classification": "organic",
   "flags": [],
@@ -151,7 +163,7 @@ exports[`Signals > analysis 'organic' 1`] = `
 }
 `;
 
-exports[`Signals > analysis 'organic' 2`] = `
+exports[`Signals > analysis 'organic/georgiagravity' 1`] = `
 {
   "classification": "organic",
   "flags": [],

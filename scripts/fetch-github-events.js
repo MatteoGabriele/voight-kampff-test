@@ -3,12 +3,15 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { faker } from "@faker-js/faker";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function generateRandomId(prefix = "user") {
-  const id = crypto.randomUUID();
-  return `${prefix}-${id}`;
+function generateReadableName(prefix = "user") {
+  // Generate a name like "John" + "Smith" -> "johnsmith"
+  const firstName = faker.person.firstName().toLowerCase();
+  const lastName = faker.person.lastName().toLowerCase();
+  return `${firstName}${lastName}`;
 }
 
 function anonymizeData(user, events) {
@@ -17,11 +20,12 @@ function anonymizeData(user, events) {
   for (const event of events) {
     const repoName = event.repo.name;
     if (!repoMapping[repoName]) {
-      repoMapping[repoName] = generateRandomId("repo");
+      const repoNum = Object.keys(repoMapping).length + 1;
+      repoMapping[repoName] = `repo-${repoNum}`;
     }
   }
 
-  const anonymousUsername = generateRandomId("user");
+  const anonymousUsername = generateReadableName("user");
 
   const anonymousUser = {
     login: anonymousUsername,
