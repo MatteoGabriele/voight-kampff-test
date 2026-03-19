@@ -280,6 +280,68 @@ export function identifyReplicant({
     }
   }
 
+  // Fork surge - applies uniformly to all accounts (detects time-based spike in forking)
+  // Spam is spam: 8+ forks in 24 hours is bot behavior regardless of account age
+  const forkEvents = events.filter((e) => e.type === "ForkEvent");
+
+  if (forkEvents.length >= CONFIG.FORKS_HIGH) {
+    // Detect if forks are clustered in time (spike) vs spread over time
+    const forkTimestamps = forkEvents
+      .map((e) => dayjs(e.created_at))
+      .sort((a, b) => a.valueOf() - b.valueOf());
+
+    let maxForksInWindow = 0;
+    let windowStartIdx = 0;
+
+    // Find the densest fork cluster within 24 hours
+    for (
+      let windowEndIdx = 0;
+      windowEndIdx < forkTimestamps.length;
+      windowEndIdx++
+    ) {
+      const windowEnd = forkTimestamps[windowEndIdx];
+
+      // Slide window start forward until within 24 hours
+      while (
+        windowEnd &&
+        windowEnd.diff(forkTimestamps[windowStartIdx], "hour", true) >
+          CONFIG.FORK_SURGE_WINDOW_HOURS
+      ) {
+        windowStartIdx++;
+      }
+
+      const forksInWindow = windowEndIdx - windowStartIdx + 1;
+      maxForksInWindow = Math.max(maxForksInWindow, forksInWindow);
+    }
+
+    // Flag based on fork spike severity, same criteria for all accounts
+    if (maxForksInWindow >= CONFIG.FORKS_SURGE_EXTREME_HIGH) {
+      flags.push({
+        label: "Extreme fork automation",
+        points: CONFIG.POINTS_FORK_SURGE_EXTREME_HIGH,
+        detail: `${maxForksInWindow} repos forked within 24 hours`,
+      });
+    } else if (maxForksInWindow >= CONFIG.FORKS_SURGE_SEVERE) {
+      flags.push({
+        label: "Severe fork surge",
+        points: CONFIG.POINTS_FORK_SURGE_SEVERE,
+        detail: `${maxForksInWindow} repos forked within 24 hours`,
+      });
+    } else if (maxForksInWindow >= CONFIG.FORKS_EXTREME) {
+      flags.push({
+        label: "Many recent forks",
+        points: CONFIG.POINTS_FORK_SURGE,
+        detail: `${maxForksInWindow} repos forked within 24 hours`,
+      });
+    } else if (maxForksInWindow >= CONFIG.FORKS_HIGH) {
+      flags.push({
+        label: "Multiple forks",
+        points: CONFIG.POINTS_MULTIPLE_FORKS,
+        detail: `${maxForksInWindow} repos forked within 24 hours`,
+      });
+    }
+  }
+
   // Additional checks for young accounts (more strict thresholds)
   if (isNewOrYoungAccount && events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
     const userLogin = accountName.toLowerCase();
@@ -376,23 +438,6 @@ export function identifyReplicant({
           });
         }
       }
-    }
-
-    // Fork surge
-    // AI agents fork lots of repos to contribute
-    const forkEvents = events.filter((e) => e.type === "ForkEvent");
-    if (forkEvents.length >= CONFIG.FORKS_EXTREME) {
-      flags.push({
-        label: "Many recent forks",
-        points: CONFIG.POINTS_FORK_SURGE,
-        detail: `${forkEvents.length} repos forked recently`,
-      });
-    } else if (forkEvents.length >= CONFIG.FORKS_HIGH) {
-      flags.push({
-        label: "Multiple forks",
-        points: CONFIG.POINTS_MULTIPLE_FORKS,
-        detail: `${forkEvents.length} repos forked recently`,
-      });
     }
 
     const codingEventTypes = new Set(["PushEvent", "PullRequestEvent"]);

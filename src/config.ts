@@ -23,11 +23,16 @@ export const CONFIG = {
   // Minimum events required for activity analysis
   MIN_EVENTS_FOR_ANALYSIS: 10,
 
-  // Fork surge thresholds
-  FORKS_EXTREME: 8, // >= this = "fork surge"
-  FORKS_HIGH: 5, // >= this = "multiple forks"
-  POINTS_FORK_SURGE: 30,
-  POINTS_MULTIPLE_FORKS: 20,
+  // Fork surge thresholds (time-based clustering, applies uniformly to all accounts)
+  FORKS_EXTREME: 8, // >= this forks within 24 hours = "fork surge"
+  FORKS_HIGH: 5, // >= this forks within 24 hours = "multiple forks"
+  FORKS_SURGE_SEVERE: 20, // >= this forks within 24 hours = severe automation
+  FORKS_SURGE_EXTREME_HIGH: 35, // >= this forks within 24 hours = extreme automation
+  FORK_SURGE_WINDOW_HOURS: 24, // time window to detect fork clustering (spam is spam)
+  POINTS_FORK_SURGE: 51, // points for 8-19 forks in 24 hours
+  POINTS_FORK_SURGE_SEVERE: 70, // points for 20-34 forks in 24 hours
+  POINTS_FORK_SURGE_EXTREME_HIGH: 85, // points for 35+ forks in 24 hours
+  POINTS_MULTIPLE_FORKS: 26, // points for 5-7 forks in 24 hours
 
   // Inhuman daily activity
   HOURS_PER_DAY_INHUMAN: 16, // >= this unique hours in a day = inhuman
