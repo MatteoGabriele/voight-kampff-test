@@ -180,7 +180,8 @@ async function generateFixture() {
     fixtureMessage.value = `✓ Fixture generated successfully!\n${data.message}`;
     fixtureUsername.value = "";
   } catch (err) {
-    fixtureError.value = err instanceof Error ? err.message : "An error occurred";
+    fixtureError.value =
+      err instanceof Error ? err.message : "An error occurred";
   } finally {
     fixtureLoading.value = false;
   }
@@ -236,61 +237,61 @@ async function generateFixture() {
         </div>
       </div>
 
-    <div v-if="loading" class="loading">
-      <span class="spinner"></span>
-      Fetching GitHub data...
-    </div>
-
-    <div v-if="error" class="error">
-      {{ error }}
-    </div>
-
-    <div v-if="result" class="results">
-      <div class="user-info">
-        <div class="user-header">
-          <img
-            v-if="result.user.avatar_url"
-            :src="result.user.avatar_url"
-            :alt="result.user.login"
-            class="user-avatar"
-          />
-          <div class="user-header-info">
-            <h3>{{ result.user.login }}</h3>
-            <p class="user-name">{{ result.user.name || "N/A" }}</p>
-          </div>
-        </div>
-        <div class="user-details">
-          <p>
-            <strong>Created:</strong>
-            {{ new Date(result.user.created_at).toLocaleDateString() }}
-          </p>
-          <p><strong>Repositories:</strong> {{ result.user.public_repos }}</p>
-          <p><strong>Followers:</strong> {{ result.user.followers }}</p>
-        </div>
+      <div v-if="loading" class="loading">
+        <span class="spinner"></span>
+        Fetching GitHub data...
       </div>
 
-      <div class="classification-result">
-        <h3>Classification Result</h3>
-        <div class="score">
-          {{ result.classificationDetails.label }}
-        </div>
-        <div class="classification-text">
-          {{ result.classificationDetails.description }}
-        </div>
-        <div class="score-detail">
-          Automation Score: <span>{{ result.totalScore }}</span> / 100
+      <div v-if="error" class="error">
+        {{ error }}
+      </div>
+
+      <div v-if="result" class="results">
+        <div class="user-info">
+          <div class="user-header">
+            <img
+              v-if="result.user.avatar_url"
+              :src="result.user.avatar_url"
+              :alt="result.user.login"
+              class="user-avatar"
+            />
+            <div class="user-header-info">
+              <h3>{{ result.user.login }}</h3>
+              <p class="user-name">{{ result.user.name || "N/A" }}</p>
+            </div>
+          </div>
+          <div class="user-details">
+            <p>
+              <strong>Created:</strong>
+              {{ new Date(result.user.created_at).toLocaleDateString() }}
+            </p>
+            <p><strong>Repositories:</strong> {{ result.user.public_repos }}</p>
+            <p><strong>Followers:</strong> {{ result.user.followers }}</p>
+          </div>
         </div>
 
-        <div v-if="result.flags.length > 0" class="flags-list">
-          <h4>Detected Flags ({{ result.flags.length }})</h4>
-          <div v-for="flag in result.flags" :key="flag.label" class="flag">
-            <div class="flag-label">{{ flag.label }}</div>
-            <div class="flag-detail">{{ flag.detail }}</div>
-            <div class="flag-points">+{{ flag.points }} points</div>
+        <div class="classification-result">
+          <h3>Classification Result</h3>
+          <div class="score">
+            {{ result.classificationDetails.label }}
+          </div>
+          <div class="classification-text">
+            {{ result.classificationDetails.description }}
+          </div>
+          <div class="score-detail">
+            Automation Score: <span>{{ result.totalScore }}</span> / 100
+          </div>
+
+          <div v-if="result.flags.length > 0" class="flags-list">
+            <h4>Detected Flags ({{ result.flags.length }})</h4>
+            <div v-for="flag in result.flags" :key="flag.label" class="flag">
+              <div class="flag-label">{{ flag.label }}</div>
+              <div class="flag-detail">{{ flag.detail }}</div>
+              <div class="flag-points">+{{ flag.points }} points</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
 
     <!-- Fixtures Tab -->

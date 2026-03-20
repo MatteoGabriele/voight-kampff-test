@@ -21,6 +21,7 @@ The app will open at `http://localhost:5173`
 The backend API runs at `http://localhost:3001`
 
 **Alternative:** Run them separately in different terminals:
+
 ```bash
 # Terminal 1
 pnpm dev
@@ -32,6 +33,7 @@ pnpm dev:server
 ## Usage
 
 ### Analyze Users
+
 - Enter a GitHub username in the input field
 - Click "Analyze" to fetch the user's data and events from GitHub's public APIs
 - The app will query:
@@ -41,11 +43,13 @@ pnpm dev:server
 - Classification scores and detected flags are displayed below
 
 ### Cached Accounts
+
 - Previously analyzed accounts are cached in localStorage
 - Cached accounts appear as quick-select buttons below the search form
 - Click on a cached account to instantly re-analyze it
 
 ### Generate Fixtures
+
 - Use the "Generate Fixture" section to create test fixtures
 - Enter a GitHub username
 - Toggle between "User" or "Automation" type
