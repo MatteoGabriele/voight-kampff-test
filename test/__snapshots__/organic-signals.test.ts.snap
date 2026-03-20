@@ -94,11 +94,34 @@ exports[`Signals > analysis 'automation/marshalltreutel' 1`] = `
 
 exports[`Signals > analysis 'automation/raymondhowell' 1`] = `
 {
-  "classification": "organic",
-  "flags": [],
+  "classification": "mixed",
+  "flags": [
+    {
+      "detail": "32 repos but only 3 recent events (potential dormant account reactivation)",
+      "label": "Low activity despite high repo count",
+      "points": 20,
+    },
+    {
+      "detail": "2 watch events (67% of activity) - potential target scanning",
+      "label": "Passive surveillance pattern",
+      "points": 15,
+    },
+  ],
   "profile": {
     "age": 792,
     "repos": 32,
+  },
+  "score": 65,
+}
+`;
+
+exports[`Signals > analysis 'user/jacquelyngoldner' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 3634,
+    "repos": 102,
   },
   "score": 100,
 }
