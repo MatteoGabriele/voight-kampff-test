@@ -23,6 +23,34 @@ exports[`Signals > analysis 'automation/dallasemard' 1`] = `
 }
 `;
 
+exports[`Signals > analysis 'automation/evelynstehr' 1`] = `
+{
+  "classification": "automation",
+  "flags": [
+    {
+      "detail": "Account is 33 days old",
+      "label": "Young account",
+      "points": 10,
+    },
+    {
+      "detail": "4 commits within very short intervals",
+      "label": "High commit frequency",
+      "points": 25,
+    },
+    {
+      "detail": "100% of activity on other people's repos",
+      "label": "Mostly external activity",
+      "points": 20,
+    },
+  ],
+  "profile": {
+    "age": 33,
+    "repos": 1,
+  },
+  "score": 45,
+}
+`;
+
 exports[`Signals > analysis 'automation/hymanlittle-carroll' 1`] = `
 {
   "classification": "automation",
@@ -99,6 +127,18 @@ exports[`Signals > analysis 'automation/raymondhowell' 1`] = `
   "profile": {
     "age": 792,
     "repos": 32,
+  },
+  "score": 100,
+}
+`;
+
+exports[`Signals > analysis 'user/jacquelyngoldner' 1`] = `
+{
+  "classification": "organic",
+  "flags": [],
+  "profile": {
+    "age": 3634,
+    "repos": 102,
   },
   "score": 100,
 }
