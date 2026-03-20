@@ -109,4 +109,31 @@ export const CONFIG = {
   ISSUE_COMMENT_MIN_FOR_SPRAY: 10, // need at least this many comments to analyze
   POINTS_ISSUE_COMMENT_SPRAY_EXTREME: 40,
   POINTS_ISSUE_COMMENT_SPRAY_HIGH: 30,
+
+  // Multi-repo commit/PR bursts (context switching detection)
+  // Commits happening across multiple repos in short time = context switching bot
+  COMMIT_BURST_WINDOW_HOURS: 1, // time window to detect commit spikes
+  COMMITS_MANY_REPOS_EXTREME: 6, // >= this commits across 5+ repos in 1 hour = extreme
+  COMMITS_MANY_REPOS_HIGH: 4, // >= this commits across 4+ repos in 1 hour = suspicious
+  DISTINCT_REPOS_COMMIT_EXTREME: 5, // need this many distinct repos for COMMITS_MANY_REPOS_EXTREME
+  DISTINCT_REPOS_COMMIT_HIGH: 4, // need this many distinct repos for COMMITS_MANY_REPOS_HIGH
+  POINTS_COMMIT_MULTI_REPO_EXTREME: 30,
+  POINTS_COMMIT_MULTI_REPO_HIGH: 20,
+
+  // PR bursts across multiple repos
+  PR_BURST_WINDOW_HOURS: 6, // time window to detect PR spikes
+  PRS_MANY_REPOS_EXTREME: 8, // >= this PRs across 4+ repos in 6 hours = extreme
+  PRS_MANY_REPOS_HIGH: 5, // >= this PRs across 3+ repos in 6 hours = suspicious
+  DISTINCT_REPOS_PR_EXTREME: 4, // need this many distinct repos for PRS_MANY_REPOS_EXTREME
+  DISTINCT_REPOS_PR_HIGH: 3, // need this many distinct repos for PRS_MANY_REPOS_HIGH
+  POINTS_PR_MULTI_REPO_EXTREME: 25,
+  POINTS_PR_MULTI_REPO_HIGH: 15,
+
+  // Activity-to-Asset mismatch detection (scalable pattern for dormant accounts reactivated)
+  // Accounts with many repos but minimal recent activity pattern = suspicious
+  REPO_ASSET_THRESHOLD: 15, // >= this many personal repos
+  LOW_EVENT_THRESHOLD: 5, // <= this many events = low activity
+  WATCH_EVENT_DOMINANT_RATIO: 0.5, // >= 50% of events are WatchEvent = passive surveillance pattern
+  POINTS_REPO_ASSET_MISMATCH: 20,
+  POINTS_WATCH_DOMINANT: 15,
 } as const;
