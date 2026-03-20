@@ -23,6 +23,34 @@ exports[`Signals > analysis 'automation/dallasemard' 1`] = `
 }
 `;
 
+exports[`Signals > analysis 'automation/evelynstehr' 1`] = `
+{
+  "classification": "automation",
+  "flags": [
+    {
+      "detail": "Account is 33 days old",
+      "label": "Young account",
+      "points": 10,
+    },
+    {
+      "detail": "4 commits within very short intervals",
+      "label": "High commit frequency",
+      "points": 25,
+    },
+    {
+      "detail": "100% of activity on other people's repos",
+      "label": "Mostly external activity",
+      "points": 20,
+    },
+  ],
+  "profile": {
+    "age": 33,
+    "repos": 1,
+  },
+  "score": 45,
+}
+`;
+
 exports[`Signals > analysis 'automation/hymanlittle-carroll' 1`] = `
 {
   "classification": "automation",
@@ -94,24 +122,13 @@ exports[`Signals > analysis 'automation/marshalltreutel' 1`] = `
 
 exports[`Signals > analysis 'automation/raymondhowell' 1`] = `
 {
-  "classification": "mixed",
-  "flags": [
-    {
-      "detail": "32 repos but only 3 recent events (potential dormant account reactivation)",
-      "label": "Low activity despite high repo count",
-      "points": 20,
-    },
-    {
-      "detail": "2 watch events (67% of activity) - potential target scanning",
-      "label": "Passive surveillance pattern",
-      "points": 15,
-    },
-  ],
+  "classification": "organic",
+  "flags": [],
   "profile": {
     "age": 792,
     "repos": 32,
   },
-  "score": 65,
+  "score": 100,
 }
 `;
 
