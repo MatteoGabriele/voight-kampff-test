@@ -32,7 +32,14 @@ const fixtureError = ref("");
 
 function getCache(): Record<string, CachedData> {
   const stored = localStorage.getItem(CACHE_KEY);
-  return stored ? JSON.parse(stored) : {};
+  if (!stored) return {};
+
+  try {
+    return JSON.parse(stored) as Record<string, CachedData>;
+  } catch {
+    localStorage.removeItem(CACHE_KEY);
+    return {};
+  }
 }
 
 function setCache(key: string, data: CachedData): void {
@@ -64,7 +71,7 @@ function getCachedAccounts(): string[] {
       username: cache[key].user.login,
       timestamp: cache[key].timestamp,
     }))
-    .sort((a, b) => b.timestamp - a.timestamp) // Most recent first
+    .sort((a, b) => b.timestamp - a.timestamp)
     .map((item) => item.username);
 }
 
@@ -88,7 +95,7 @@ async function analyzeUser() {
     const cached = getCachedData(usernameLower);
 
     let user: GitHubUser;
-    let events: GitHubEvent[];
+    let events: GitHubEvent[] = [];
 
     if (cached) {
       user = cached.user;
@@ -103,14 +110,21 @@ async function analyzeUser() {
       }
       user = await userResponse.json();
 
-      // Fetch last 200 public events
-      const eventsResponse = await fetch(
-        `https://api.github.com/users/${username.value}/events/public?per_page=200`,
-      );
-      if (!eventsResponse.ok) {
-        throw new Error("Failed to fetch events");
+      // Fetch last 200 public events (2 pages of 100 each)
+      const MIN_PAGE = 1;
+      const MAX_PAGE = 2;
+
+      for (let page = MIN_PAGE; page <= MAX_PAGE; page++) {
+        const eventsResponse = await fetch(
+          `https://api.github.com/users/${username.value}/events/public?per_page=100&page=${page}`,
+        );
+        if (!eventsResponse.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        const pageEvents: GitHubEvent[] = await eventsResponse.json();
+        if (pageEvents.length === 0) break; // Stop if no more events
+        events.push(...pageEvents);
       }
-      events = await eventsResponse.json();
 
       // Cache the data
       setCache(usernameLower, {
@@ -143,10 +157,6 @@ async function analyzeUser() {
   } finally {
     loading.value = false;
   }
-}
-
-function getFixtureCommand(): string {
-  return `pnpm add:fixture ${fixtureUsername.value} ${fixtureType.value}`;
 }
 
 async function generateFixture() {

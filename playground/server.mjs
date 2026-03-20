@@ -36,10 +36,9 @@ const server = http.createServer((req, res) => {
         }
 
         // Execute the pnpm command
-        const command = `pnpm add:fixture ${username} ${type}`;
-        console.log(`Executing: ${command}`);
+        console.log(`Executing: `pnpm add:fixture ${username} ${type}``);
 
-        exec(command, { cwd: rootDir }, (error, stdout, stderr) => {
+        exec('pnpm', ['add:fixture', username, type], { cwd: rootDir }, (error, stdout, stderr) => {
           if (error) {
             res.writeHead(500);
             res.end(
