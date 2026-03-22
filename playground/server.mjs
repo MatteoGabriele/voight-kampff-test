@@ -36,28 +36,33 @@ const server = http.createServer((req, res) => {
         }
 
         // Execute the pnpm command
-        console.log(`Executing: `pnpm add:fixture ${username} ${type}``);
+        console.log(`Executing: pnpm add:fixture ${username} ${type}`);
 
-        exec('pnpm', ['add:fixture', username, type], { cwd: rootDir }, (error, stdout, stderr) => {
-          if (error) {
-            res.writeHead(500);
+        exec(
+          "pnpm",
+          ["add:fixture", username, type],
+          { cwd: rootDir },
+          (error, stdout, stderr) => {
+            if (error) {
+              res.writeHead(500);
+              res.end(
+                JSON.stringify({
+                  error: error.message,
+                  stderr: stderr || "",
+                }),
+              );
+              return;
+            }
+
+            res.writeHead(200);
             res.end(
               JSON.stringify({
-                error: error.message,
-                stderr: stderr || "",
+                success: true,
+                message: stdout.trim(),
               }),
             );
-            return;
-          }
-
-          res.writeHead(200);
-          res.end(
-            JSON.stringify({
-              success: true,
-              message: stdout.trim(),
-            }),
-          );
-        });
+          },
+        );
       } catch (err) {
         res.writeHead(400);
         res.end(JSON.stringify({ error: "Invalid JSON" }));
