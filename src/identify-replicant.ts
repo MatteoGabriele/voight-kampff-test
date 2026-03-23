@@ -292,11 +292,11 @@ export function identifyReplicant({
     branchCreates.length >= CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS &&
     prEvents.length >= CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS
   ) {
-    // First check: branch/PR ratio must be near 1:1 (not legitimate devs with many unrelated PRs)
+    // branch/PR ratio must be near 1:1
     const branchPRRatio = branchCreates.length / prEvents.length;
 
     if (branchPRRatio >= CONFIG.BRANCH_PR_COUNT_RATIO_MIN) {
-      // Now check temporal correlation: are branches followed by PRs within the window?
+      // are branches followed by PRs within the window?
       // Create timestamped sorted lists
       const branchTimes = branchCreates
         .map((e) => ({ event: e, time: dayjs(e.created_at) }))
