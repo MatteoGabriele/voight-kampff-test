@@ -69,6 +69,24 @@ exports[`Signals > analysis 'automation/hymanlittle-carroll' 1`] = `
 }
 `;
 
+exports[`Signals > analysis 'automation/jaydenkunze' 1`] = `
+{
+  "classification": "mixed",
+  "flags": [
+    {
+      "detail": "14/20 branch creations followed by PRs within 41s",
+      "label": "Automated branch→PR workflow",
+      "points": 35,
+    },
+  ],
+  "profile": {
+    "age": 396,
+    "repos": 31,
+  },
+  "score": 65,
+}
+`;
+
 exports[`Signals > analysis 'automation/leebogisich' 1`] = `
 {
   "classification": "automation",

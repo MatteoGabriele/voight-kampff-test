@@ -1,5 +1,5 @@
 import http from "http";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -27,7 +27,30 @@ const server = http.createServer((req, res) => {
 
     req.on("end", () => {
       try {
-        const { username, type } = JSON.parse(body);
+        if (!body) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: "Request body is empty" }));
+          return;
+        }
+
+        let parsedData;
+        try {
+          parsedData = JSON.parse(body);
+        } catch (parseErr) {
+          console.error("JSON parse error:", parseErr.message);
+          console.error("Body received:", body);
+          res.writeHead(400);
+          res.end(
+            JSON.stringify({
+              error: "Invalid JSON",
+              details: parseErr.message,
+              received: body.substring(0, 100),
+            }),
+          );
+          return;
+        }
+
+        const { username, type } = parsedData;
 
         if (!username || !type) {
           res.writeHead(400);
@@ -38,7 +61,7 @@ const server = http.createServer((req, res) => {
         // Execute the pnpm command
         console.log(`Executing: pnpm add:fixture ${username} ${type}`);
 
-        exec(
+        execFile(
           "pnpm",
           ["add:fixture", username, type],
           { cwd: rootDir },
@@ -64,8 +87,13 @@ const server = http.createServer((req, res) => {
           },
         );
       } catch (err) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        res.writeHead(500);
+        res.end(
+          JSON.stringify({
+            error: "Server error",
+            details: err.message,
+          }),
+        );
       }
     });
     return;

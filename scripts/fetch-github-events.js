@@ -104,10 +104,19 @@ async function fetchGitHubEvents(username, type = "automation") {
         },
       };
 
+      // Extract relevant payload properties by event type
       if (event?.payload?.ref_type) {
+        // CreateEvent: include branch/repo ref type
         newEvent = {
           ...newEvent,
           payload: { ref_type: event.payload.ref_type },
+        };
+      }
+
+      if (event?.payload?.action) {
+        newEvent = {
+          ...newEvent,
+          payload: { action: event.payload.action },
         };
       }
 
