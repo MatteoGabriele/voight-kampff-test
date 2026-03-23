@@ -286,11 +286,9 @@ export function identifyReplicant({
   const branchCreates = events.filter(
     (e) => e.type === "CreateEvent" && e.payload?.ref_type === "branch",
   );
-  // Only include PR submission events (action === "opened" or no action data available)
+  // Only include explicitly opened PR submission events
   const prEvents = events.filter(
-    (e) =>
-      e.type === "PullRequestEvent" &&
-      (!e.payload?.action || e.payload.action === "opened"),
+    (e) => e.type === "PullRequestEvent" && e.payload?.action === "opened",
   );
 
   if (

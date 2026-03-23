@@ -56,11 +56,6 @@ exports[`Signals > analysis 'automation/hymanlittle-carroll' 1`] = `
   "classification": "automation",
   "flags": [
     {
-      "detail": "22/24 branch creations followed by PRs within 72s",
-      "label": "Automated branch→PR workflow",
-      "points": 35,
-    },
-    {
       "detail": "38 repos forked within 24 hours",
       "label": "Extreme fork automation",
       "points": 85,
@@ -70,7 +65,25 @@ exports[`Signals > analysis 'automation/hymanlittle-carroll' 1`] = `
     "age": 1347,
     "repos": 172,
   },
-  "score": 0,
+  "score": 15,
+}
+`;
+
+exports[`Signals > analysis 'automation/jaydenkunze' 1`] = `
+{
+  "classification": "mixed",
+  "flags": [
+    {
+      "detail": "14/20 branch creations followed by PRs within 41s",
+      "label": "Automated branch→PR workflow",
+      "points": 35,
+    },
+  ],
+  "profile": {
+    "age": 396,
+    "repos": 31,
+  },
+  "score": 65,
 }
 `;
 
@@ -84,11 +97,6 @@ exports[`Signals > analysis 'automation/leebogisich' 1`] = `
       "points": 40,
     },
     {
-      "detail": "31/31 branch creations followed by PRs within 71s",
-      "label": "Automated branch→PR workflow",
-      "points": 35,
-    },
-    {
       "detail": "6 repos forked within 24 hours",
       "label": "Multiple forks",
       "points": 26,
@@ -98,7 +106,7 @@ exports[`Signals > analysis 'automation/leebogisich' 1`] = `
     "age": 1096,
     "repos": 134,
   },
-  "score": 0,
+  "score": 34,
 }
 `;
 
@@ -139,24 +147,6 @@ exports[`Signals > analysis 'automation/raymondhowell' 1`] = `
     "repos": 32,
   },
   "score": 100,
-}
-`;
-
-exports[`Signals > analysis 'automation/vernagrant' 1`] = `
-{
-  "classification": "mixed",
-  "flags": [
-    {
-      "detail": "14/20 branch creations followed by PRs within 41s",
-      "label": "Automated branch→PR workflow",
-      "points": 35,
-    },
-  ],
-  "profile": {
-    "age": 396,
-    "repos": 30,
-  },
-  "score": 65,
 }
 `;
 
