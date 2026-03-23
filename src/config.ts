@@ -109,4 +109,23 @@ export const CONFIG = {
   ISSUE_COMMENT_MIN_FOR_SPRAY: 10, // need at least this many comments to analyze
   POINTS_ISSUE_COMMENT_SPRAY_EXTREME: 40,
   POINTS_ISSUE_COMMENT_SPRAY_HIGH: 30,
+
+  // Single-day activity concentration (bot automation)
+  EVENTS_PER_DAY_EXTREME: 100, // >= this events in a single day = suspicious
+  POINTS_SINGLE_DAY_EXTREME: 30,
+
+  // Branch→PR temporal correlation (automated CI/CD workflow pattern)
+  BRANCH_PR_TIME_WINDOW_SECONDS: 90, // PR must follow branch within this window
+  BRANCH_PR_PATTERN_MIN_PAIRS: 8, // need at least this many correlated pairs to flag
+  BRANCH_PR_PATTERN_RATIO_MIN: 0.65, // >= 65% of branches must have matching PRs
+  BRANCH_PR_COUNT_RATIO_MIN: 0.65, // branches/PRs ratio must be >= this (low ratio = legitimate dev with many unrelated PRs)
+  POINTS_BRANCH_PR_AUTOMATION: 35, // strong automation indicator
+
+  // Legacy: Branch creation frequency (deprecated in favor of temporal correlation)
+  BRANCH_CREATES_PER_HOUR_EXTREME: 5, // >= this branch creates per hour = automation
+  POINTS_BRANCH_SPAM: 25,
+
+  // Correlated branch-PR pattern (workflow automation indicator)
+  BRANCH_PR_CORRELATION_RATIO: 0.7, // if branch creates / recent PRs >= this, likely automation
+  POINTS_CORRELATED_WORKFLOW: 20,
 } as const;

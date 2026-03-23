@@ -182,16 +182,20 @@ async function generateFixture() {
     });
 
     const data = await response.json();
+    console.log("Server response:", data);
 
     if (!response.ok) {
-      throw new Error(data.error || "Failed to generate fixture");
+      const errorMsg =
+        data.details || data.error || "Failed to generate fixture";
+      throw new Error(errorMsg);
     }
 
     fixtureMessage.value = `✓ Fixture generated successfully!\n${data.message}`;
     fixtureUsername.value = "";
   } catch (err) {
-    fixtureError.value =
-      err instanceof Error ? err.message : "An error occurred";
+    const message = err instanceof Error ? err.message : "An error occurred";
+    fixtureError.value = message;
+    console.error("Fixture error:", message);
   } finally {
     fixtureLoading.value = false;
   }
