@@ -56,7 +56,7 @@ exports[`Signals > analysis 'automation/hymanlittle-carroll' 1`] = `
   "classification": "automation",
   "flags": [
     {
-      "detail": "23/24 branch creations followed by PRs within 72s",
+      "detail": "22/24 branch creations followed by PRs within 72s",
       "label": "Automated branch→PR workflow",
       "points": 35,
     },

@@ -336,6 +336,7 @@ export function identifyReplicant({
               maxObservedTimeDiff,
               timeDiffSeconds,
             );
+            prIdx++; // Consume this PR so it matches at most one branch (1:1 pairing)
           }
         }
       }
