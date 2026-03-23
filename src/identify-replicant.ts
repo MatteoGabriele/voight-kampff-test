@@ -144,12 +144,22 @@ export function identifyReplicant({
       const hasMinimalRest = maxRestGap < 3;
       const meetsEventThreshold =
         avgEventsPerHour >= CONFIG.EVENTS_PER_HOUR_MIN;
+      const isEstablished = accountAge >= CONFIG.AGE_ESTABLISHED_ACCOUNT;
 
-      if (
-        activeHours >= CONFIG.HOURS_ACTIVE_EXTREME &&
-        meetsEventThreshold &&
-        (isSuspiciouslyUniform || hasMinimalRest)
-      ) {
+      // Stricter threshold for established accounts - only flag if BOTH uniform AND minimal rest
+      const thresholdHours = isEstablished
+        ? CONFIG.HOURS_ACTIVE_EXTREME_ESTABLISHED
+        : CONFIG.HOURS_ACTIVE_EXTREME;
+      const shouldFlag = isEstablished
+        ? activeHours >= thresholdHours &&
+          meetsEventThreshold &&
+          isSuspiciouslyUniform &&
+          hasMinimalRest
+        : activeHours >= thresholdHours &&
+          meetsEventThreshold &&
+          (isSuspiciouslyUniform || hasMinimalRest);
+
+      if (shouldFlag) {
         let points: number = CONFIG.POINTS_24_7_ACTIVITY;
         // Increase severity if both uniform AND minimal rest
         if (isSuspiciouslyUniform && hasMinimalRest) {
@@ -283,6 +293,15 @@ export function identifyReplicant({
   // Temporal branch→PR correlation (automated CI/CD workflow detection)
   // Detects pattern: branch created, PR submitted within short window, repeatedly
   // This is a strong automation indicator: real developers don't mechanically repeat this pattern
+  // Use stricter thresholds for established accounts to avoid false positives while still catching bot bursts
+  const isEstablished = accountAge >= CONFIG.AGE_ESTABLISHED_ACCOUNT;
+  const branchPRMinPairs = isEstablished
+    ? CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS_ESTABLISHED
+    : CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS;
+  const branchPRMinRatio = isEstablished
+    ? CONFIG.BRANCH_PR_PATTERN_RATIO_MIN_ESTABLISHED
+    : CONFIG.BRANCH_PR_PATTERN_RATIO_MIN;
+
   const branchCreates = events.filter(
     (e) => e.type === "CreateEvent" && e.payload?.ref_type === "branch",
   );
@@ -292,8 +311,8 @@ export function identifyReplicant({
   );
 
   if (
-    branchCreates.length >= CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS &&
-    prEvents.length >= CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS
+    branchCreates.length >= branchPRMinPairs &&
+    prEvents.length >= branchPRMinPairs
   ) {
     // branch/PR ratio must be near 1:1
     const branchPRRatio = branchCreates.length / prEvents.length;
@@ -345,13 +364,13 @@ export function identifyReplicant({
       }
 
       // Flag if enough branch→PR pairs follow the automated pattern
-      if (matchedPairs >= CONFIG.BRANCH_PR_PATTERN_MIN_PAIRS) {
+      if (matchedPairs >= branchPRMinPairs) {
         const automationRatio = matchedPairs / branchCreates.length;
 
         // Only flag if most branches have matching PRs (strong automation indicator)
-        if (automationRatio >= CONFIG.BRANCH_PR_PATTERN_RATIO_MIN) {
+        if (automationRatio >= branchPRMinRatio) {
           flags.push({
-            label: "Automated branch→PR workflow",
+            label: "Automated branch/PR workflow",
             points: CONFIG.POINTS_BRANCH_PR_AUTOMATION,
             detail: `${matchedPairs}/${branchCreates.length} branch creations followed by PRs within ${maxObservedTimeDiff}s`,
           });

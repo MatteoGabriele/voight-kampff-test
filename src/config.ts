@@ -95,8 +95,10 @@ export const CONFIG = {
 
   // 24/7 activity pattern (no sleep) - adjusted for fewer false positives
   HOURS_ACTIVE_EXTREME: 21, // activity across 21+ hours = suspicious (no realistic sleep)
+  HOURS_ACTIVE_EXTREME_ESTABLISHED: 23, // stricter threshold for established accounts (23+ hours)
   EVENTS_PER_HOUR_MIN: 2.0, // minimum events per active hour for 24/7 pattern
   POINTS_24_7_ACTIVITY: 25,
+  AGE_ESTABLISHED_ACCOUNT: 1000, // accounts older than this (days) use stricter thresholds
 
   // Event type diversity (bots have narrow activity)
   EVENT_TYPE_DIVERSITY_MIN: 2, // <= 2 event types = very limited diversity
@@ -113,7 +115,9 @@ export const CONFIG = {
   // Branch→PR temporal correlation (automated CI/CD workflow pattern)
   BRANCH_PR_TIME_WINDOW_SECONDS: 90, // PR must follow branch within this window
   BRANCH_PR_PATTERN_MIN_PAIRS: 8, // need at least this many correlated pairs to flag
+  BRANCH_PR_PATTERN_MIN_PAIRS_ESTABLISHED: 15, // stricter threshold for established accounts
   BRANCH_PR_PATTERN_RATIO_MIN: 0.65, // >= 65% of branches must have matching PRs
+  BRANCH_PR_PATTERN_RATIO_MIN_ESTABLISHED: 0.8, // stricter ratio for established (80%)
   BRANCH_PR_COUNT_RATIO_MIN: 0.65, // branches/PRs ratio must be >= this (low ratio = legitimate dev with many unrelated PRs)
   POINTS_BRANCH_PR_AUTOMATION: 35, // strong automation indicator
 } as const;
