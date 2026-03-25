@@ -165,7 +165,7 @@ export function identifyReplicant({
     eventsByDay.forEach((hoursInDay, day) => {
       const hoursActive = hoursInDay.size;
       const eventsOnDay = events.filter(
-        (e) => dayjs(e.created_at).format("YYYY-MM-DD") === day,
+        (e) => dayjs.utc(e.created_at).format("YYYY-MM-DD") === day,
       ).length;
 
       // Only check days with significant activity
