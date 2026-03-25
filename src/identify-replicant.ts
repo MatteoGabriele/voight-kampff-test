@@ -660,7 +660,10 @@ export function identifyReplicant({
     });
 
     // Check if these inhuman days are consecutive (require both many hours AND high entropy)
-    if (daysWithUniformDistribution.length >= CONFIG.CONSECUTIVE_INHUMAN_DAYS_EXTREME) {
+    if (
+      daysWithUniformDistribution.length >=
+      CONFIG.CONSECUTIVE_INHUMAN_DAYS_EXTREME
+    ) {
       daysWithUniformDistribution.sort();
       let consecutiveCount = 1;
       let maxConsecutive = 1;
@@ -684,7 +687,9 @@ export function identifyReplicant({
           points: CONFIG.POINTS_NONSTOP_ACTIVITY,
           detail: `${maxConsecutive} days in a row with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding`,
         });
-      } else if (daysWithUniformDistribution.length >= CONFIG.FREQUENT_MARATHON_DAYS) {
+      } else if (
+        daysWithUniformDistribution.length >= CONFIG.FREQUENT_MARATHON_DAYS
+      ) {
         flags.push({
           label: "Frequent long coding days",
           points: CONFIG.POINTS_FREQUENT_MARATHON,
