@@ -15,7 +15,6 @@ import type {
  * Calculate Shannon's entropy of a probability distribution
  * Lower entropy = more concentrated/predictable (bot-like)
  * Higher entropy = more uniformly distributed / random
- * Range: [0, ln(n)] where n is the number of states
  */
 function calculateShannonsEntropy(counts: number[]): number {
   if (counts.length === 0) return 0;
@@ -174,7 +173,7 @@ export function identifyReplicant({
         // Find the largest rest window (sleep gap) in this specific day
         const firstHour = sortedHours[0]!;
         const lastHour = sortedHours[sortedHours.length - 1]!;
-        let maxRestThisDay = 24 - lastHour + firstHour; // wrap-around gap
+        let maxRestThisDay = 24 - lastHour + firstHour - 1; // wrap-around gap, consistent -1 with intra-day logic
 
         for (let i = 0; i < sortedHours.length - 1; i++) {
           const gap = sortedHours[i + 1]! - sortedHours[i]! - 1;
@@ -660,14 +659,14 @@ export function identifyReplicant({
       }
     });
 
-    // Check if these inhuman days are consecutive
-    if (daysWithManyHours.length >= CONFIG.CONSECUTIVE_INHUMAN_DAYS_EXTREME) {
-      daysWithManyHours.sort();
+    // Check if these inhuman days are consecutive (require both many hours AND high entropy)
+    if (daysWithUniformDistribution.length >= CONFIG.CONSECUTIVE_INHUMAN_DAYS_EXTREME) {
+      daysWithUniformDistribution.sort();
       let consecutiveCount = 1;
       let maxConsecutive = 1;
-      for (let i = 1; i < daysWithManyHours.length; i++) {
-        const prev = dayjs(daysWithManyHours[i - 1]);
-        const curr = dayjs(daysWithManyHours[i]);
+      for (let i = 1; i < daysWithUniformDistribution.length; i++) {
+        const prev = dayjs(daysWithUniformDistribution[i - 1]);
+        const curr = dayjs(daysWithUniformDistribution[i]);
         const diffDays = curr.diff(prev, "day");
 
         if (diffDays === 1) {
@@ -685,11 +684,11 @@ export function identifyReplicant({
           points: CONFIG.POINTS_NONSTOP_ACTIVITY,
           detail: `${maxConsecutive} days in a row with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding`,
         });
-      } else if (daysWithManyHours.length >= CONFIG.FREQUENT_MARATHON_DAYS) {
+      } else if (daysWithUniformDistribution.length >= CONFIG.FREQUENT_MARATHON_DAYS) {
         flags.push({
           label: "Frequent long coding days",
           points: CONFIG.POINTS_FREQUENT_MARATHON,
-          detail: `${daysWithManyHours.length} days with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding each`,
+          detail: `${daysWithUniformDistribution.length} days with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding and uniform hourly distribution`,
         });
       }
     }
