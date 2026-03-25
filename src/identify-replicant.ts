@@ -615,8 +615,8 @@ export function identifyReplicant({
     );
 
     // Inhuman daily coding activity detection using Shannon's entropy
-    // Bots: uniform hour distribution (low entropy) across many hours
-    // Humans: concentrated in certain hours (higher entropy/predictable patterns)
+    // Bots: uniform hour distribution (high entropy) across many hours = suspicious
+    // Humans: concentrated in certain hours (low entropy/predictable patterns)
     const codingEventsByDay = new Map<string, Date[]>();
     codingEventsWithReviews.forEach((e) => {
       if (!e.created_at) {
