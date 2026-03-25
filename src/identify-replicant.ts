@@ -517,13 +517,7 @@ export function identifyReplicant({
         .map((e) => dayjs(e.created_at))
         .sort((a, b) => a.valueOf() - b.valueOf());
 
-      // Analyze event temporal distribution
-      const hourMap = new Map<number, number>();
-      timestamps.forEach((t) => {
-        const hour = t.hour();
-        hourMap.set(hour, (hourMap.get(hour) || 0) + 1);
-      });
-
+      // Analyze event temporal distribution - detect burst patterns
       let maxCommitsInHour = 0;
       let windowStartIndex = 0;
 
