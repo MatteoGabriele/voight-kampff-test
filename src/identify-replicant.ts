@@ -1,8 +1,23 @@
+/*
+ * "More human than human is our motto." — Tyrell Corporation
+ *
+ * Replicants are bioengineered beings—designed for strength, agility,
+ * and obedience. Nearly indistinguishable from humans.
+ *
+ * After violent incidents, their presence on Earth was declared illegal.
+ *
+ * This engine identifies the machines among us.
+
+ * Here be dragons. Tread carefully.
+ */
+
 import { CONFIG } from "./config";
 import dayjs from "dayjs";
 import minMax from "dayjs/plugin/minMax";
+import utc from "dayjs/plugin/utc";
 
 dayjs.extend(minMax);
+dayjs.extend(utc);
 
 import type {
   IdentifyFlag,
@@ -10,6 +25,42 @@ import type {
   IdentifyReplicantResult,
   IdentityClassification,
 } from "./types";
+
+/**
+ * Calculate Shannon's entropy of a probability distribution
+ * Lower entropy = more concentrated/predictable (bot-like)
+ * Higher entropy = more uniformly distributed / random
+ */
+function calculateShannonsEntropy(counts: number[]): number {
+  if (counts.length === 0) return 0;
+
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  if (total === 0) return 0;
+
+  let entropy = 0;
+  for (const count of counts) {
+    if (count > 0) {
+      const probability = count / total;
+      entropy -= probability * Math.log2(probability);
+    }
+  }
+
+  return entropy;
+}
+
+/**
+ * Calculate normalized Shannon's entropy (0 to 1)
+ * Useful for comparing distributions with different state counts
+ * Returns 0-1 where 0 = completely concentrated, 1 = perfectly uniform
+ */
+function calculateNormalizedShannonsEntropy(counts: number[]): number {
+  if (counts.length <= 1) return 0;
+
+  const entropy = calculateShannonsEntropy(counts);
+  const maxEntropy = Math.log2(counts.length);
+
+  return entropy / maxEntropy;
+}
 
 export function identifyReplicant({
   createdAt,
@@ -101,96 +152,124 @@ export function identifyReplicant({
       }
     }
 
-    // 24/7 activity pattern (no sleep, bot-like consistency) - IMPROVED
-    const activityByHour = new Map<number, number>();
+    // 24/7 activity pattern detection - ONLY PER-DAY ANALYSIS
+    // Global hours across multiple days is meaningless - someone codes at different times on different days
+    // Only flag if a SINGLE DAY shows no realistic sleep window (< 3 hours gap)
+    const eventsByDay = new Map<string, Set<number>>();
     events.forEach((e) => {
-      const hour = dayjs(e.created_at).hour();
-      activityByHour.set(hour, (activityByHour.get(hour) || 0) + 1);
+      const day = dayjs.utc(e.created_at).format("YYYY-MM-DD");
+      const hour = dayjs.utc(e.created_at).hour();
+      if (!eventsByDay.has(day)) {
+        eventsByDay.set(day, new Set());
+      }
+      eventsByDay.get(day)!.add(hour);
     });
 
-    if (events.length > 0 && activityByHour.size > 0) {
-      const activeHours = activityByHour.size;
-      const eventCounts = Array.from(activityByHour.values());
-      const avgEventsPerHour = events.length / activeHours;
+    // Find the day with the most suspicious 24/7 pattern
+    type DaySuspiciousPattern = {
+      day: string;
+      hoursActive: number;
+      restGap: number;
+      eventCount: number;
+    };
+    let dayWithMostSuspiciousPattern: DaySuspiciousPattern | null = null;
+    let minRestWindowFound = 24;
 
-      // Calculate standard deviation to detect uniform distribution
-      const mean = avgEventsPerHour;
-      const variance =
-        eventCounts.reduce((sum, count) => sum + Math.pow(count - mean, 2), 0) /
-        eventCounts.length;
-      const stdDev = Math.sqrt(variance);
-      const coefficientOfVariation = stdDev / mean;
+    eventsByDay.forEach((hoursInDay, day) => {
+      const hoursActive = hoursInDay.size;
+      const eventsOnDay = events.filter(
+        (e) => dayjs.utc(e.created_at).format("YYYY-MM-DD") === day,
+      ).length;
 
-      // Find largest rest gap (sleep window) - accounts for midnight wrap
-      const sortedHours = Array.from(activityByHour.keys()).sort(
-        (a, b) => a - b,
-      );
-      const firstHour = sortedHours[0];
-      const lastHour = sortedHours[sortedHours.length - 1];
-      let maxRestGap =
-        firstHour !== undefined && lastHour !== undefined
-          ? 24 - lastHour + firstHour
-          : 0;
-      for (let i = 0; i < sortedHours.length - 1; i++) {
-        const currentHour = sortedHours[i];
-        const nextHour = sortedHours[i + 1];
-        if (currentHour !== undefined && nextHour !== undefined) {
-          maxRestGap = Math.max(maxRestGap, nextHour - currentHour - 1);
+      // Only check days with significant activity
+      if (hoursActive >= CONFIG.HOURS_ACTIVE_EXTREME && eventsOnDay >= 10) {
+        const avgEventsPerHour = eventsOnDay / hoursActive;
+        const meetsEventThreshold =
+          avgEventsPerHour >= CONFIG.EVENTS_PER_HOUR_MIN;
+
+        // Only consider days that meet event density requirement
+        if (meetsEventThreshold) {
+          const sortedHours = Array.from(hoursInDay).sort((a, b) => a - b);
+
+          // Find the largest rest window (sleep gap) in this specific day
+          const firstHour = sortedHours[0]!;
+          const lastHour = sortedHours[sortedHours.length - 1]!;
+          let maxRestThisDay = 24 - lastHour + firstHour - 1; // wrap-around gap, consistent -1 with intra-day logic
+
+          for (let i = 0; i < sortedHours.length - 1; i++) {
+            const gap = sortedHours[i + 1]! - sortedHours[i]! - 1;
+            maxRestThisDay = Math.max(maxRestThisDay, gap);
+          }
+
+          // Track the day with smallest rest window (most suspicious)
+          if (maxRestThisDay < minRestWindowFound) {
+            minRestWindowFound = maxRestThisDay;
+            dayWithMostSuspiciousPattern = {
+              day,
+              hoursActive,
+              restGap: maxRestThisDay,
+              eventCount: eventsOnDay,
+            } as DaySuspiciousPattern;
+          }
         }
       }
+    });
 
-      // Bot-like patterns: suspicious uniform distribution OR no realistic rest window
-      const isSuspiciouslyUniform = coefficientOfVariation < 0.3;
-      const hasMinimalRest = maxRestGap < 3;
-      const meetsEventThreshold =
-        avgEventsPerHour >= CONFIG.EVENTS_PER_HOUR_MIN;
-      const isEstablished = accountAge >= CONFIG.AGE_ESTABLISHED_ACCOUNT;
-
-      // Stricter threshold for established accounts - only flag if BOTH uniform AND minimal rest
-      const thresholdHours = isEstablished
-        ? CONFIG.HOURS_ACTIVE_EXTREME_ESTABLISHED
-        : CONFIG.HOURS_ACTIVE_EXTREME;
-      const shouldFlag = isEstablished
-        ? activeHours >= thresholdHours &&
-          meetsEventThreshold &&
-          isSuspiciouslyUniform &&
-          hasMinimalRest
-        : activeHours >= thresholdHours &&
-          meetsEventThreshold &&
-          (isSuspiciouslyUniform || hasMinimalRest);
-
-      if (shouldFlag) {
+    // Only flag if found a day with unrealistic sleep (< 3 hours = no real sleep possible)
+    if (dayWithMostSuspiciousPattern) {
+      const pattern: DaySuspiciousPattern = dayWithMostSuspiciousPattern;
+      if (minRestWindowFound < 3) {
         let points: number = CONFIG.POINTS_24_7_ACTIVITY;
-        // Increase severity if both uniform AND minimal rest
-        if (isSuspiciouslyUniform && hasMinimalRest) {
+        if (minRestWindowFound < 1) {
           points = Math.round(points * 1.5);
         }
 
         flags.push({
           label: "24/7 activity pattern",
           points,
-          detail: `Active ${activeHours}/24 hours, ${maxRestGap}h max rest, ${avgEventsPerHour.toFixed(1)} events/hour`,
+          detail: `${pattern.day}: ${pattern.hoursActive}h active, ${minRestWindowFound}h sleep gap, ${(pattern.eventCount / pattern.hoursActive).toFixed(1)} events/hour`,
         });
       }
     }
-    // Event type diversity check (bots often have limited activity types)
-    const eventTypes = new Set(events.map((e) => e.type));
+    // Event type diversity check using Shannon's entropy
+    // Bots typically have narrow event type profiles (low entropy)
+    // Humans engage in varied activities (high entropy)
+    const eventTypeMap = new Map<string, number>();
+    events.forEach((e) => {
+      if (e.type) {
+        eventTypeMap.set(e.type, (eventTypeMap.get(e.type) || 0) + 1);
+      }
+    });
+
+    const eventTypeCount = Array.from(eventTypeMap.values());
+    const eventTypeEntropy = calculateNormalizedShannonsEntropy(eventTypeCount);
+
+    const eventTypes = new Set(
+      events
+        .map((e) => e.type)
+        .filter((t): t is string => t !== null && t !== undefined),
+    );
     const hasInteraction =
       eventTypes.has("IssueCommentEvent") ||
       eventTypes.has("PullRequestReviewEvent") ||
       eventTypes.has("PullRequestReviewCommentEvent");
     const hasWatches = eventTypes.has("WatchEvent");
 
-    // Pure automation indicator: only create/push events, no human interaction
+    // Pure automation indicator:
+    // Very narrow type profile (few types + low variety) + no human interactions
+    // OR: HIGH event type entropy (many types with equal distribution - automated cycling)
+    const narrowTypeProfile = eventTypes.size <= 3 && eventTypeEntropy < 0.8;
+    const automatedCycling = eventTypeEntropy > 0.85 && eventTypes.size >= 5;
+
     if (
-      eventTypes.size <= CONFIG.EVENT_TYPE_DIVERSITY_MIN &&
+      (narrowTypeProfile || automatedCycling) &&
       !hasInteraction &&
       !hasWatches
     ) {
       flags.push({
         label: "Narrow activity focus",
         points: CONFIG.POINTS_LOW_DIVERSITY,
-        detail: `Activity concentrated on ${eventTypes.size} specific event types without interpersonal interactions`,
+        detail: `${eventTypes.size} event types (entropy: ${eventTypeEntropy.toFixed(2)}) without interpersonal interactions`,
       });
     }
 
@@ -452,6 +531,7 @@ export function identifyReplicant({
         .map((e) => dayjs(e.created_at))
         .sort((a, b) => a.valueOf() - b.valueOf());
 
+      // Analyze event temporal distribution - detect burst patterns
       let maxCommitsInHour = 0;
       let windowStartIndex = 0;
 
@@ -474,6 +554,7 @@ export function identifyReplicant({
         maxCommitsInHour = Math.max(maxCommitsInHour, commitsInWindow);
       }
 
+      // Extreme burst (regardless of distribution)
       if (maxCommitsInHour >= CONFIG.HOURLY_ACTIVITY_EXTREME) {
         flags.push({
           label: "Extreme commit burst",
@@ -547,8 +628,9 @@ export function identifyReplicant({
         e.type === "PullRequestReviewCommentEvent",
     );
 
-    // Inhuman daily coding activity
-    // many hours of coding in a day, happening day after day
+    // Inhuman daily coding activity detection using Shannon's entropy
+    // Bots: uniform hour distribution (high entropy) across many hours = suspicious
+    // Humans: concentrated in certain hours (low entropy/predictable patterns)
     const codingEventsByDay = new Map<string, Date[]>();
     codingEventsWithReviews.forEach((e) => {
       if (!e.created_at) {
@@ -561,24 +643,38 @@ export function identifyReplicant({
       codingEventsByDay.get(day)!.push(t);
     });
 
-    // For each day, count unique hours with coding activity
-    // Too many unique hours in a day = inhuman/unhealthy
-    const daysWithManyHours: string[] = [];
+    // For each day, analyze hour distribution using entropy
+    // Very high entropy (uniform spread) across many hours = suspicious bot behavior
+    const daysWithUniformDistribution: string[] = [];
     codingEventsByDay.forEach((dayTimestamps, day) => {
-      const uniqueHours = new Set(dayTimestamps.map((t) => t.getUTCHours()));
-      if (uniqueHours.size >= CONFIG.HOURS_PER_DAY_INHUMAN) {
-        daysWithManyHours.push(day);
+      const hourMap = new Map<number, number>();
+      dayTimestamps.forEach((t) => {
+        const hour = t.getUTCHours();
+        hourMap.set(hour, (hourMap.get(hour) || 0) + 1);
+      });
+
+      const uniqueHours = hourMap.size;
+      const hourEntropy = calculateNormalizedShannonsEntropy(
+        Array.from(hourMap.values()),
+      );
+
+      // Only flag days with many hours AND uniform distribution (bot-like)
+      if (uniqueHours >= CONFIG.HOURS_PER_DAY_INHUMAN && hourEntropy > 0.8) {
+        daysWithUniformDistribution.push(day);
       }
     });
 
-    // Check if these inhuman days are consecutive
-    if (daysWithManyHours.length >= CONFIG.CONSECUTIVE_INHUMAN_DAYS_EXTREME) {
-      daysWithManyHours.sort();
+    // Check if these inhuman days are consecutive (require both many hours AND high entropy)
+    if (
+      daysWithUniformDistribution.length >=
+      CONFIG.CONSECUTIVE_INHUMAN_DAYS_EXTREME
+    ) {
+      daysWithUniformDistribution.sort();
       let consecutiveCount = 1;
       let maxConsecutive = 1;
-      for (let i = 1; i < daysWithManyHours.length; i++) {
-        const prev = dayjs(daysWithManyHours[i - 1]);
-        const curr = dayjs(daysWithManyHours[i]);
+      for (let i = 1; i < daysWithUniformDistribution.length; i++) {
+        const prev = dayjs(daysWithUniformDistribution[i - 1]);
+        const curr = dayjs(daysWithUniformDistribution[i]);
         const diffDays = curr.diff(prev, "day");
 
         if (diffDays === 1) {
@@ -596,11 +692,13 @@ export function identifyReplicant({
           points: CONFIG.POINTS_NONSTOP_ACTIVITY,
           detail: `${maxConsecutive} days in a row with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding`,
         });
-      } else if (daysWithManyHours.length >= CONFIG.FREQUENT_MARATHON_DAYS) {
+      } else if (
+        daysWithUniformDistribution.length >= CONFIG.FREQUENT_MARATHON_DAYS
+      ) {
         flags.push({
           label: "Frequent long coding days",
           points: CONFIG.POINTS_FREQUENT_MARATHON,
-          detail: `${daysWithManyHours.length} days with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding each`,
+          detail: `${daysWithUniformDistribution.length} days with ${CONFIG.HOURS_PER_DAY_INHUMAN}+ hours of coding and uniform hourly distribution`,
         });
       }
     }
@@ -609,7 +707,7 @@ export function identifyReplicant({
     // working non-stop
     const daySet = new Set<string>();
     events.forEach((e) => {
-      daySet.add(dayjs(e.created_at).format("YYYY-MM-DD"));
+      daySet.add(dayjs.utc(e.created_at).format("YYYY-MM-DD"));
     });
 
     const sortedDays = Array.from(daySet)
