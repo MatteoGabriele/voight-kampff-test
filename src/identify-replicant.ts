@@ -170,27 +170,34 @@ export function identifyReplicant({
 
       // Only check days with significant activity
       if (hoursActive >= CONFIG.HOURS_ACTIVE_EXTREME && eventsOnDay >= 10) {
-        const sortedHours = Array.from(hoursInDay).sort((a, b) => a - b);
+        const avgEventsPerHour = eventsOnDay / hoursActive;
+        const meetsEventThreshold =
+          avgEventsPerHour >= CONFIG.EVENTS_PER_HOUR_MIN;
 
-        // Find the largest rest window (sleep gap) in this specific day
-        const firstHour = sortedHours[0]!;
-        const lastHour = sortedHours[sortedHours.length - 1]!;
-        let maxRestThisDay = 24 - lastHour + firstHour - 1; // wrap-around gap, consistent -1 with intra-day logic
+        // Only consider days that meet event density requirement
+        if (meetsEventThreshold) {
+          const sortedHours = Array.from(hoursInDay).sort((a, b) => a - b);
 
-        for (let i = 0; i < sortedHours.length - 1; i++) {
-          const gap = sortedHours[i + 1]! - sortedHours[i]! - 1;
-          maxRestThisDay = Math.max(maxRestThisDay, gap);
-        }
+          // Find the largest rest window (sleep gap) in this specific day
+          const firstHour = sortedHours[0]!;
+          const lastHour = sortedHours[sortedHours.length - 1]!;
+          let maxRestThisDay = 24 - lastHour + firstHour - 1; // wrap-around gap, consistent -1 with intra-day logic
 
-        // Track the day with smallest rest window (most suspicious)
-        if (maxRestThisDay < minRestWindowFound) {
-          minRestWindowFound = maxRestThisDay;
-          dayWithMostSuspiciousPattern = {
-            day,
-            hoursActive,
-            restGap: maxRestThisDay,
-            eventCount: eventsOnDay,
-          } as DaySuspiciousPattern;
+          for (let i = 0; i < sortedHours.length - 1; i++) {
+            const gap = sortedHours[i + 1]! - sortedHours[i]! - 1;
+            maxRestThisDay = Math.max(maxRestThisDay, gap);
+          }
+
+          // Track the day with smallest rest window (most suspicious)
+          if (maxRestThisDay < minRestWindowFound) {
+            minRestWindowFound = maxRestThisDay;
+            dayWithMostSuspiciousPattern = {
+              day,
+              hoursActive,
+              restGap: maxRestThisDay,
+              eventCount: eventsOnDay,
+            } as DaySuspiciousPattern;
+          }
         }
       }
     });
@@ -199,22 +206,16 @@ export function identifyReplicant({
     if (dayWithMostSuspiciousPattern) {
       const pattern: DaySuspiciousPattern = dayWithMostSuspiciousPattern;
       if (minRestWindowFound < 3) {
-        const avgEventsPerHour = pattern.eventCount / pattern.hoursActive;
-        const meetsEventThreshold =
-          avgEventsPerHour >= CONFIG.EVENTS_PER_HOUR_MIN;
-
-        if (meetsEventThreshold) {
-          let points: number = CONFIG.POINTS_24_7_ACTIVITY;
-          if (minRestWindowFound < 1) {
-            points = Math.round(points * 1.5);
-          }
-
-          flags.push({
-            label: "24/7 activity pattern",
-            points,
-            detail: `${pattern.day}: ${pattern.hoursActive}h active, ${minRestWindowFound}h sleep gap, ${avgEventsPerHour.toFixed(1)} events/hour`,
-          });
+        let points: number = CONFIG.POINTS_24_7_ACTIVITY;
+        if (minRestWindowFound < 1) {
+          points = Math.round(points * 1.5);
         }
+
+        flags.push({
+          label: "24/7 activity pattern",
+          points,
+          detail: `${pattern.day}: ${pattern.hoursActive}h active, ${minRestWindowFound}h sleep gap, ${(pattern.eventCount / pattern.hoursActive).toFixed(1)} events/hour`,
+        });
       }
     }
     // Event type diversity check using Shannon's entropy
