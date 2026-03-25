@@ -1,8 +1,10 @@
 import { CONFIG } from "./config";
 import dayjs from "dayjs";
 import minMax from "dayjs/plugin/minMax";
+import utc from "dayjs/plugin/utc";
 
 dayjs.extend(minMax);
+dayjs.extend(utc);
 
 import type {
   IdentifyFlag,
@@ -142,8 +144,8 @@ export function identifyReplicant({
     // Only flag if a SINGLE DAY shows no realistic sleep window (< 3 hours gap)
     const eventsByDay = new Map<string, Set<number>>();
     events.forEach((e) => {
-      const day = dayjs(e.created_at).format("YYYY-MM-DD");
-      const hour = dayjs(e.created_at).hour();
+      const day = dayjs.utc(e.created_at).format("YYYY-MM-DD");
+      const hour = dayjs.utc(e.created_at).hour();
       if (!eventsByDay.has(day)) {
         eventsByDay.set(day, new Set());
       }
