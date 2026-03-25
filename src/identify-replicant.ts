@@ -1,3 +1,16 @@
+/*
+ * "More human than human is our motto." — Tyrell Corporation
+ *
+ * Replicants are bioengineered beings—designed for strength, agility,
+ * and obedience. Nearly indistinguishable from humans.
+ *
+ * After violent incidents, their presence on Earth was declared illegal.
+ *
+ * This engine identifies the machines among us.
+
+ * Here be dragons. Tread carefully.
+ */
+
 import { CONFIG } from "./config";
 import dayjs from "dayjs";
 import minMax from "dayjs/plugin/minMax";
@@ -632,7 +645,6 @@ export function identifyReplicant({
 
     // For each day, analyze hour distribution using entropy
     // Very high entropy (uniform spread) across many hours = suspicious bot behavior
-    const daysWithManyHours: string[] = [];
     const daysWithUniformDistribution: string[] = [];
     codingEventsByDay.forEach((dayTimestamps, day) => {
       const hourMap = new Map<number, number>();
@@ -646,13 +658,9 @@ export function identifyReplicant({
         Array.from(hourMap.values()),
       );
 
-      if (uniqueHours >= CONFIG.HOURS_PER_DAY_INHUMAN) {
-        daysWithManyHours.push(day);
-
-        // Flag if additionally has uniform distribution (bot-like)
-        if (hourEntropy > 0.8) {
-          daysWithUniformDistribution.push(day);
-        }
+      // Only flag days with many hours AND uniform distribution (bot-like)
+      if (uniqueHours >= CONFIG.HOURS_PER_DAY_INHUMAN && hourEntropy > 0.8) {
+        daysWithUniformDistribution.push(day);
       }
     });
 
@@ -699,7 +707,7 @@ export function identifyReplicant({
     // working non-stop
     const daySet = new Set<string>();
     events.forEach((e) => {
-      daySet.add(dayjs(e.created_at).format("YYYY-MM-DD"));
+      daySet.add(dayjs.utc(e.created_at).format("YYYY-MM-DD"));
     });
 
     const sortedDays = Array.from(daySet)
