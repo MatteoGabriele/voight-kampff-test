@@ -24,18 +24,23 @@ exports[`Signals > analysis 'automation/joannwalsh' 1`] = `
       "label": "Established account",
       "points": -10,
     },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
+    },
   ],
   "profile": {
     "age": 1097,
     "repos": 134,
   },
-  "score": 9,
+  "score": 14,
 }
 `;
 
 exports[`Signals > analysis 'automation/reedpurdy' 1`] = `
 {
-  "classification": "mixed",
+  "classification": "organic",
   "flags": [
     {
       "detail": "13 repos forked within 24 hours",
@@ -47,30 +52,50 @@ exports[`Signals > analysis 'automation/reedpurdy' 1`] = `
       "label": "Established account",
       "points": -10,
     },
+    {
+      "detail": "77-day activity gap (bots don't take breaks)",
+      "label": "Extended activity hiatus",
+      "points": -10,
+    },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
+    },
   ],
   "profile": {
     "age": 1372,
     "repos": 125,
   },
-  "score": 59,
+  "score": 74,
 }
 `;
 
 exports[`Signals > analysis 'automation/sheilaleffler' 1`] = `
 {
-  "classification": "mixed",
+  "classification": "organic",
   "flags": [
     {
       "detail": "14/20 branch creations followed by PRs within 41s",
       "label": "Automated branch/PR workflow",
       "points": 35,
     },
+    {
+      "detail": "36-day activity gap",
+      "label": "Activity hiatus",
+      "points": -5,
+    },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
+    },
   ],
   "profile": {
     "age": 397,
     "repos": 31,
   },
-  "score": 65,
+  "score": 75,
 }
 `;
 
@@ -87,6 +112,21 @@ exports[`Signals > analysis 'user/claudiaschoen' 1`] = `
       "detail": "Account is 4994 days old (5+ years)",
       "label": "Long-standing account",
       "points": -20,
+    },
+    {
+      "detail": "6 outbound code reviews on others' PRs",
+      "label": "Code review contributor",
+      "points": -5,
+    },
+    {
+      "detail": "6 inline review comments on others' code",
+      "label": "Inline code reviewer",
+      "points": -5,
+    },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
     },
   ],
   "profile": {
@@ -105,6 +145,16 @@ exports[`Signals > analysis 'user/elenahowe' 1`] = `
       "detail": "Account is 3221 days old (5+ years)",
       "label": "Long-standing account",
       "points": -20,
+    },
+    {
+      "detail": "53 outbound code reviews on others' PRs",
+      "label": "Active code reviewer",
+      "points": -10,
+    },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
     },
   ],
   "profile": {
@@ -142,6 +192,21 @@ exports[`Signals > analysis 'user/shellychristiansen' 1`] = `
       "label": "Long-standing account",
       "points": -20,
     },
+    {
+      "detail": "37 outbound code reviews on others' PRs",
+      "label": "Active code reviewer",
+      "points": -10,
+    },
+    {
+      "detail": "15 inline review comments on others' code",
+      "label": "Frequent inline reviewer",
+      "points": -10,
+    },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
+    },
   ],
   "profile": {
     "age": 2353,
@@ -164,6 +229,26 @@ exports[`Signals > analysis 'user/vaughnjohnston' 1`] = `
       "detail": "Account is 4576 days old (5+ years)",
       "label": "Long-standing account",
       "points": -20,
+    },
+    {
+      "detail": "8 outbound code reviews on others' PRs",
+      "label": "Code review contributor",
+      "points": -5,
+    },
+    {
+      "detail": "4 inline review comments on others' code",
+      "label": "Inline code reviewer",
+      "points": -5,
+    },
+    {
+      "detail": "33-day activity gap",
+      "label": "Activity hiatus",
+      "points": -5,
+    },
+    {
+      "detail": "Uneven day-of-week activity distribution suggests natural rest cycles",
+      "label": "Human activity patterns",
+      "points": -5,
     },
   ],
   "profile": {

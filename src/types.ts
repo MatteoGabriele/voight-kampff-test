@@ -22,6 +22,14 @@ export type IdentifyReplicantOptions = {
   accountName: string;
   events: GitHubEvent[];
   repos?: Array<{ created_at: string }>;
+  profile?: {
+    followers?: number;
+    name?: string | null;
+    company?: string | null;
+    location?: string | null;
+    bio?: string | null;
+    blog?: string | null;
+  };
 };
 
 export type IdentityClassification = "organic" | "mixed" | "automation";

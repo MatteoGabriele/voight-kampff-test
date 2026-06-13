@@ -68,6 +68,7 @@ export function identifyReplicant({
   accountName,
   events,
   repos,
+  profile,
 }: IdentifyReplicantOptions): IdentifyReplicantResult {
   const flags: IdentifyFlag[] = [];
 
@@ -903,6 +904,218 @@ export function identifyReplicant({
         points: -CONFIG.POINTS_PRE_AI_REPOS,
         detail: `${preAiRepoCount} repos created before ${CONFIG.PRE_AI_REPOS_YEAR}`,
       });
+    }
+  }
+
+  // Outbound PR review mitigating signal: reviewing others' code means reading diffs you didn't write and making a judgment call — bots submit PRs, they don't review them
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const userLogin = accountName.toLowerCase();
+    let reviewCount = 0;
+    for (const e of events) {
+      if (e.type !== "PullRequestReviewEvent") continue;
+      const repoOwner = e.repo?.name?.split("/")[0]?.toLowerCase();
+      if (!repoOwner || repoOwner === userLogin) continue;
+      reviewCount++;
+    }
+    if (reviewCount >= CONFIG.REVIEW_EVENTS_HIGH) {
+      flags.push({
+        label: "Active code reviewer",
+        points: -CONFIG.POINTS_REVIEW_ACTIVITY_HIGH,
+        detail: `${reviewCount} outbound code reviews on others' PRs`,
+      });
+    } else if (reviewCount >= CONFIG.REVIEW_EVENTS_BASE) {
+      flags.push({
+        label: "Code review contributor",
+        points: -CONFIG.POINTS_REVIEW_ACTIVITY,
+        detail: `${reviewCount} outbound code reviews on others' PRs`,
+      });
+    }
+  }
+
+  // Inline review comment mitigating signal: inline diff comments require reading specific code lines — cognitively expensive at scale
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const userLogin = accountName.toLowerCase();
+    let reviewCommentCount = 0;
+    for (const e of events) {
+      if (e.type !== "PullRequestReviewCommentEvent") continue;
+      const repoOwner = e.repo?.name?.split("/")[0]?.toLowerCase();
+      if (!repoOwner || repoOwner === userLogin) continue;
+      reviewCommentCount++;
+    }
+    if (reviewCommentCount >= CONFIG.REVIEW_COMMENT_EVENTS_HIGH) {
+      flags.push({
+        label: "Frequent inline reviewer",
+        points: -CONFIG.POINTS_REVIEW_COMMENTS_HIGH,
+        detail: `${reviewCommentCount} inline review comments on others' code`,
+      });
+    } else if (reviewCommentCount >= CONFIG.REVIEW_COMMENT_EVENTS_BASE) {
+      flags.push({
+        label: "Inline code reviewer",
+        points: -CONFIG.POINTS_REVIEW_COMMENTS,
+        detail: `${reviewCommentCount} inline review comments on others' code`,
+      });
+    }
+  }
+
+  // Follower count mitigating signal: organic GitHub followers accumulate through real work and are hard to inflate post-2022
+  if (profile?.followers !== undefined) {
+    if (profile.followers >= CONFIG.FOLLOWERS_HIGH) {
+      flags.push({
+        label: "Established community presence",
+        points: -CONFIG.POINTS_FOLLOWERS_HIGH,
+        detail: `${profile.followers} GitHub followers`,
+      });
+    } else if (profile.followers >= CONFIG.FOLLOWERS_BASE) {
+      flags.push({
+        label: "Community presence",
+        points: -CONFIG.POINTS_FOLLOWERS_BASE,
+        detail: `${profile.followers} GitHub followers`,
+      });
+    }
+  }
+
+  // Identity completeness mitigating signal: maintaining a full, non-generic profile is high friction for a bot farm
+  if (profile) {
+    const filledFields = [
+      profile.name,
+      profile.company,
+      profile.location,
+      profile.bio,
+      profile.blog,
+    ].filter((f) => f && (f as string).trim().length > 0).length;
+    const hasRichBio =
+      (profile.bio?.trim().length ?? 0) >= CONFIG.IDENTITY_BIO_MIN_LENGTH;
+    if (filledFields >= CONFIG.IDENTITY_FIELDS_ALL && hasRichBio) {
+      flags.push({
+        label: "Complete developer identity",
+        points: -CONFIG.POINTS_IDENTITY_HIGH,
+        detail: `All ${filledFields} profile fields filled with substantive content`,
+      });
+    } else if (filledFields >= CONFIG.IDENTITY_FIELDS_BASE) {
+      flags.push({
+        label: "Established developer identity",
+        points: -CONFIG.POINTS_IDENTITY_BASE,
+        detail: `${filledFields} of 5 profile fields filled`,
+      });
+    }
+  }
+
+  // Activity dormancy gap mitigating signal: bots run 24/7 because idle time is wasted infrastructure cost; real hiatuses are a human pattern
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const timestamps = [...events]
+      .map((e) => new Date(e.created_at).getTime())
+      .filter((t) => !isNaN(t))
+      .sort((a, b) => a - b);
+    let maxGapDays = 0;
+    for (let i = 1; i < timestamps.length; i++) {
+      const gap = (timestamps[i] - timestamps[i - 1]) / (1000 * 60 * 60 * 24);
+      if (gap > maxGapDays) maxGapDays = gap;
+    }
+    if (maxGapDays >= CONFIG.DORMANCY_GAP_LONG_DAYS) {
+      flags.push({
+        label: "Extended activity hiatus",
+        points: -CONFIG.POINTS_DORMANCY_GAP_LONG,
+        detail: `${Math.round(maxGapDays)}-day activity gap (bots don't take breaks)`,
+      });
+    } else if (maxGapDays >= CONFIG.DORMANCY_GAP_DAYS) {
+      flags.push({
+        label: "Activity hiatus",
+        points: -CONFIG.POINTS_DORMANCY_GAP,
+        detail: `${Math.round(maxGapDays)}-day activity gap`,
+      });
+    }
+  }
+
+  // Gist activity mitigating signal: gists serve personal utility with zero spam value — bots have no incentive to create them
+  if (events.some((e) => e.type === "GistEvent")) {
+    flags.push({
+      label: "Gist activity",
+      points: -CONFIG.POINTS_GIST_ACTIVITY,
+      detail: "Gists indicate personal utility use, not automated behavior",
+    });
+  }
+
+  // PR iteration cycle mitigating signal: synchronize events on external PRs = author responded to reviewer feedback
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const userLogin = accountName.toLowerCase();
+    const syncRepos = new Set<string>();
+    for (const e of events) {
+      if (e.type !== "PullRequestEvent" || e.payload?.action !== "synchronize")
+        continue;
+      const repoOwner = e.repo?.name?.split("/")[0]?.toLowerCase();
+      if (!repoOwner || repoOwner === userLogin) continue;
+      const repo = e.repo?.name;
+      if (repo) syncRepos.add(repo.toLowerCase());
+    }
+    if (syncRepos.size >= CONFIG.PR_SYNC_REPOS_HIGH) {
+      flags.push({
+        label: "Active PR iteration across many repos",
+        points: -CONFIG.POINTS_PR_SYNC_HIGH,
+        detail: `Updated open PRs in ${syncRepos.size} repos in response to feedback`,
+      });
+    } else if (syncRepos.size >= CONFIG.PR_SYNC_REPOS_BASE) {
+      flags.push({
+        label: "Active PR iteration",
+        points: -CONFIG.POINTS_PR_SYNC_BASE,
+        detail: `Updated open PRs in ${syncRepos.size} repos in response to feedback`,
+      });
+    }
+  }
+
+  // Long-span repo engagement mitigating signal: returning to the same repo 4+ months later signals investment in a project, not a drive-by fork
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const repoSpans = new Map<string, { min: number; max: number }>();
+    for (const e of events) {
+      const repo = e.repo?.name;
+      if (!repo) continue;
+      const t = new Date(e.created_at).getTime();
+      if (isNaN(t)) continue;
+      const span = repoSpans.get(repo);
+      if (!span) {
+        repoSpans.set(repo, { min: t, max: t });
+      } else {
+        span.min = Math.min(span.min, t);
+        span.max = Math.max(span.max, t);
+      }
+    }
+    let longSpanCount = 0;
+    for (const { min, max } of repoSpans.values()) {
+      if ((max - min) / (1000 * 60 * 60 * 24) >= CONFIG.REPO_SPAN_MIN_DAYS)
+        longSpanCount++;
+    }
+    if (longSpanCount >= CONFIG.REPO_SPAN_HIGH_COUNT) {
+      flags.push({
+        label: "Deep long-term project engagement",
+        points: -CONFIG.POINTS_REPO_SPAN_HIGH,
+        detail: `${longSpanCount} repos with 4+ months of consistent engagement`,
+      });
+    } else if (longSpanCount >= CONFIG.REPO_SPAN_BASE_COUNT) {
+      flags.push({
+        label: "Long-term project engagement",
+        points: -CONFIG.POINTS_REPO_SPAN_BASE,
+        detail: `${longSpanCount} repos with 4+ months of consistent engagement`,
+      });
+    }
+  }
+
+  // Day-of-week variance mitigating signal: humans have uneven weekly patterns; perfectly uniform distribution is a bot tell
+  if (events.length >= CONFIG.DOW_EVENTS_MIN) {
+    const dowCounts = new Array<number>(7).fill(0);
+    for (const e of events) {
+      const t = new Date(e.created_at);
+      if (!isNaN(t.getTime())) dowCounts[t.getDay()]++;
+    }
+    const mean = dowCounts.reduce((a, b) => a + b, 0) / 7;
+    if (mean > 0) {
+      const variance =
+        dowCounts.reduce((sum, c) => sum + (c - mean) ** 2, 0) / 7;
+      if (Math.sqrt(variance) / mean >= CONFIG.DOW_VARIANCE_CV_MIN) {
+        flags.push({
+          label: "Human activity patterns",
+          points: -CONFIG.POINTS_DOW_VARIANCE,
+          detail: "Uneven day-of-week activity distribution suggests natural rest cycles",
+        });
+      }
     }
   }
 

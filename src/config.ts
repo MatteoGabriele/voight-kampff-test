@@ -140,4 +140,56 @@ export const CONFIG = {
   PRE_AI_REPOS_HIGH: 8,                  // >= 8 qualifying repos = high mitigation
   POINTS_PRE_AI_REPOS: 10,
   POINTS_PRE_AI_REPOS_HIGH: 20,
+
+  // Outbound PR review mitigating signal (reviewing others' code)
+  REVIEW_EVENTS_BASE: 5,
+  REVIEW_EVENTS_HIGH: 15,
+  POINTS_REVIEW_ACTIVITY: 5,
+  POINTS_REVIEW_ACTIVITY_HIGH: 10,
+
+  // Inline PR review comment mitigating signal (reading diffs and commenting on specific lines)
+  REVIEW_COMMENT_EVENTS_BASE: 3,
+  REVIEW_COMMENT_EVENTS_HIGH: 10,
+  POINTS_REVIEW_COMMENTS: 5,
+  POINTS_REVIEW_COMMENTS_HIGH: 10,
+
+  // Follower count mitigating signal (organic social proof — hard to inflate post-2022)
+  FOLLOWERS_BASE: 50,
+  FOLLOWERS_HIGH: 200,
+  POINTS_FOLLOWERS_BASE: 5,
+  POINTS_FOLLOWERS_HIGH: 10,
+
+  // Identity completeness mitigating signal (full profile = high friction for bot farms)
+  IDENTITY_FIELDS_BASE: 3,
+  IDENTITY_FIELDS_ALL: 5,
+  IDENTITY_BIO_MIN_LENGTH: 20,
+  POINTS_IDENTITY_BASE: 5,
+  POINTS_IDENTITY_HIGH: 10,
+
+  // Activity dormancy gap mitigating signal (bots don't take breaks)
+  DORMANCY_GAP_DAYS: 30,
+  DORMANCY_GAP_LONG_DAYS: 60,
+  POINTS_DORMANCY_GAP: 5,
+  POINTS_DORMANCY_GAP_LONG: 10,
+
+  // Gist activity mitigating signal (personal utility, zero spam value for bots)
+  POINTS_GIST_ACTIVITY: 5,
+
+  // PR iteration cycle mitigating signal (synchronize = author responded to review feedback)
+  PR_SYNC_REPOS_BASE: 2,
+  PR_SYNC_REPOS_HIGH: 5,
+  POINTS_PR_SYNC_BASE: 5,
+  POINTS_PR_SYNC_HIGH: 10,
+
+  // Long-span repo engagement mitigating signal (returning to same repo over 4+ months)
+  REPO_SPAN_MIN_DAYS: 120,
+  REPO_SPAN_BASE_COUNT: 2,
+  REPO_SPAN_HIGH_COUNT: 4,
+  POINTS_REPO_SPAN_BASE: 5,
+  POINTS_REPO_SPAN_HIGH: 10,
+
+  // Day-of-week variance mitigating signal (human rest patterns; uniform distribution is a bot tell)
+  DOW_EVENTS_MIN: 20,
+  DOW_VARIANCE_CV_MIN: 0.3,
+  POINTS_DOW_VARIANCE: 5,
 } as const;

@@ -462,3 +462,860 @@ describe("Repos created before AI era mitigating signal", () => {
     expect(highFlag).toBeUndefined();
   });
 });
+
+// ─── helpers for the new signal tests ────────────────────────────────────────
+
+function reviewEvent(repo: string, eventDate: string): GitHubEvent {
+  return {
+    type: "PullRequestReviewEvent",
+    created_at: eventDate,
+    repo: { id: 0, name: repo, url: "" },
+    payload: { action: "submitted" },
+  } as unknown as GitHubEvent;
+}
+
+function reviewCommentEvent(repo: string, eventDate: string): GitHubEvent {
+  return {
+    type: "PullRequestReviewCommentEvent",
+    created_at: eventDate,
+    repo: { id: 0, name: repo, url: "" },
+    payload: {},
+  } as unknown as GitHubEvent;
+}
+
+function syncEvent(repo: string, eventDate: string): GitHubEvent {
+  return {
+    type: "PullRequestEvent",
+    created_at: eventDate,
+    repo: { id: 0, name: repo, url: "" },
+    payload: { action: "synchronize" },
+  } as unknown as GitHubEvent;
+}
+
+function gistEvent(eventDate: string): GitHubEvent {
+  return {
+    type: "GistEvent",
+    created_at: eventDate,
+    repo: { id: 0, name: "gist", url: "" },
+    payload: {},
+  } as unknown as GitHubEvent;
+}
+
+function pushEventAt(repo: string, eventDate: string): GitHubEvent {
+  return {
+    type: "PushEvent",
+    created_at: eventDate,
+    repo: { id: 0, name: repo, url: "" },
+    payload: {},
+  } as unknown as GitHubEvent;
+}
+
+// ─── outbound PR review ───────────────────────────────────────────────────────
+
+describe("Outbound PR review mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when 15+ outbound reviews submitted", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 15 }, (_, i) =>
+        reviewEvent(`org-${i}/repo`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Active code reviewer");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when 5–14 outbound reviews submitted", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 5 }, (_, i) =>
+        reviewEvent(`org-${i}/repo`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Code review contributor",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when fewer than 5 outbound reviews", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 4 }, (_, i) =>
+        reviewEvent(`org-${i}/repo`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Active code reviewer" ||
+        f.label === "Code review contributor",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("ignores review events on own repos", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 15 }, (_, i) =>
+        reviewEvent(`testuser/repo-${i}`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Active code reviewer" ||
+        f.label === "Code review contributor",
+    );
+    expect(flag).toBeUndefined();
+  });
+});
+
+// ─── inline review comments ───────────────────────────────────────────────────
+
+describe("Inline review comment mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when 10+ inline review comments", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 10 }, (_, i) =>
+        reviewCommentEvent(`org-${i}/repo`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Frequent inline reviewer",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when 3–9 inline review comments", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 3 }, (_, i) =>
+        reviewCommentEvent(`org-${i}/repo`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Inline code reviewer");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when fewer than 3 inline review comments", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 2 }, (_, i) =>
+        reviewCommentEvent(`org-${i}/repo`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Frequent inline reviewer" ||
+        f.label === "Inline code reviewer",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("ignores inline review comments on own repos", () => {
+    const events = padToMinEvents(
+      Array.from({ length: 10 }, (_, i) =>
+        reviewCommentEvent(`testuser/repo-${i}`, "2026-01-15T10:00:00Z"),
+      ),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Frequent inline reviewer" ||
+        f.label === "Inline code reviewer",
+    );
+    expect(flag).toBeUndefined();
+  });
+});
+
+// ─── follower count ───────────────────────────────────────────────────────────
+
+describe("Follower count mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when 200+ followers", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: { followers: 200 },
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Established community presence",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when 50–199 followers", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: { followers: 50 },
+    });
+
+    const flag = result.flags.find((f) => f.label === "Community presence");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when fewer than 50 followers", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: { followers: 49 },
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Established community presence" ||
+        f.label === "Community presence",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("does not trigger when profile is absent", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Established community presence" ||
+        f.label === "Community presence",
+    );
+    expect(flag).toBeUndefined();
+  });
+});
+
+// ─── identity completeness ────────────────────────────────────────────────────
+
+describe("Identity completeness mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when all 5 fields filled and bio is substantive", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: {
+        name: "Alice Developer",
+        company: "OSS Corp",
+        location: "Berlin, Germany",
+        bio: "Building open source software and contributing to the ecosystem.",
+        blog: "https://alice.dev",
+      },
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Complete developer identity",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when 3 fields filled", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: {
+        name: "Alice Developer",
+        company: "OSS Corp",
+        location: "Berlin, Germany",
+      },
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Established developer identity",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not apply high mitigation when all fields filled but bio is short", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: {
+        name: "Alice",
+        company: "Corp",
+        location: "Berlin",
+        bio: "Dev",
+        blog: "https://alice.dev",
+      },
+    });
+
+    const highFlag = result.flags.find(
+      (f) => f.label === "Complete developer identity",
+    );
+    expect(highFlag).toBeUndefined();
+
+    // base tier fires because 5 fields are filled (>= 3)
+    const baseFlag = result.flags.find(
+      (f) => f.label === "Established developer identity",
+    );
+    expect(baseFlag).toBeDefined();
+  });
+
+  it("does not trigger when fewer than 3 fields filled", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+      profile: {
+        name: "Alice",
+        company: null,
+        location: "",
+        bio: null,
+        blog: "",
+      },
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Complete developer identity" ||
+        f.label === "Established developer identity",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("does not trigger when profile is absent", () => {
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: padToMinEvents([], "testuser"),
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Complete developer identity" ||
+        f.label === "Established developer identity",
+    );
+    expect(flag).toBeUndefined();
+  });
+});
+
+// ─── activity dormancy gap ────────────────────────────────────────────────────
+
+describe("Activity dormancy gap mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when a 60+ day gap exists", () => {
+    // Aug 1 → Dec 1 = 122 days ≥ 60
+    const events = padToMinEvents(
+      [pushEventAt("external/repo", "2025-08-01T10:00:00Z")],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Extended activity hiatus",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when a 30–59 day gap exists", () => {
+    // Oct 20 → Dec 1 = 42 days ≥ 30
+    const events = padToMinEvents(
+      [pushEventAt("external/repo", "2025-10-20T10:00:00Z")],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Activity hiatus");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when no gap exceeds 29 days", () => {
+    // padToMinEvents produces Dec 1–12, max gap = 1 day
+    const events = padToMinEvents([], "testuser");
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Extended activity hiatus" || f.label === "Activity hiatus",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("uses the largest gap in the event history", () => {
+    // Three gaps: Nov1→Dec1 (30 days), Dec1→Dec2 (1 day), Dec2→Dec3 (1 day)
+    // The 30-day gap should trigger base tier
+    const events = padToMinEvents(
+      [pushEventAt("external/repo", "2025-11-01T10:00:00Z")],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Activity hiatus" ||
+        f.label === "Extended activity hiatus",
+    );
+    expect(flag).toBeDefined();
+  });
+});
+
+// ─── gist activity ────────────────────────────────────────────────────────────
+
+describe("Gist activity mitigating signal", () => {
+  it("applies mitigation (-5 pts) when any GistEvent is present", () => {
+    const events = padToMinEvents(
+      [gistEvent("2026-01-15T10:00:00Z")],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Gist activity");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when no GistEvent is present", () => {
+    const events = padToMinEvents([], "testuser");
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Gist activity");
+    expect(flag).toBeUndefined();
+  });
+
+  it("only needs one GistEvent to trigger (multiple do not stack)", () => {
+    const events = padToMinEvents(
+      [
+        gistEvent("2026-01-10T10:00:00Z"),
+        gistEvent("2026-01-15T10:00:00Z"),
+        gistEvent("2026-01-20T10:00:00Z"),
+      ],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const gistFlags = result.flags.filter((f) => f.label === "Gist activity");
+    expect(gistFlags).toHaveLength(1);
+    expect(gistFlags[0].points).toBe(-5);
+  });
+});
+
+// ─── PR iteration cycles ──────────────────────────────────────────────────────
+
+describe("PR iteration cycle mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when synchronize events span 5+ external repos", () => {
+    const externalRepos = [
+      "org-a/repo-1",
+      "org-b/repo-2",
+      "org-c/repo-3",
+      "org-d/repo-4",
+      "org-e/repo-5",
+    ];
+    const events = padToMinEvents(
+      externalRepos.map((repo) => syncEvent(repo, "2026-01-15T10:00:00Z")),
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Active PR iteration across many repos",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when synchronize events span 2–4 external repos", () => {
+    const events = padToMinEvents(
+      [
+        syncEvent("org-a/repo-1", "2026-01-15T10:00:00Z"),
+        syncEvent("org-b/repo-2", "2026-01-15T10:00:00Z"),
+      ],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Active PR iteration");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when synchronize events span only 1 external repo", () => {
+    const events = padToMinEvents(
+      [syncEvent("org-a/repo-1", "2026-01-15T10:00:00Z")],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Active PR iteration across many repos" ||
+        f.label === "Active PR iteration",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("deduplicates: multiple synchronize events to the same repo count once", () => {
+    // 3 sync events but all to the same repo = 1 unique repo = below threshold
+    const events = padToMinEvents(
+      [
+        syncEvent("org-a/repo-1", "2026-01-10T10:00:00Z"),
+        syncEvent("org-a/repo-1", "2026-01-12T10:00:00Z"),
+        syncEvent("org-a/repo-1", "2026-01-15T10:00:00Z"),
+      ],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Active PR iteration across many repos" ||
+        f.label === "Active PR iteration",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("ignores synchronize events on own repos", () => {
+    const events = padToMinEvents(
+      [
+        syncEvent("testuser/repo-1", "2026-01-15T10:00:00Z"),
+        syncEvent("testuser/repo-2", "2026-01-15T10:00:00Z"),
+        syncEvent("testuser/repo-3", "2026-01-15T10:00:00Z"),
+        syncEvent("testuser/repo-4", "2026-01-15T10:00:00Z"),
+        syncEvent("testuser/repo-5", "2026-01-15T10:00:00Z"),
+      ],
+      "testuser",
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Active PR iteration across many repos" ||
+        f.label === "Active PR iteration",
+    );
+    expect(flag).toBeUndefined();
+  });
+});
+
+// ─── long-span repo engagement ────────────────────────────────────────────────
+
+describe("Long-span repo engagement mitigating signal", () => {
+  it("applies high mitigation (-10 pts) when 4+ repos have 4+ month engagement span", () => {
+    // each repo has events 8 months apart (Jul 2025 and Mar 2026 = ~243 days ≥ 120)
+    const spanEvents = ["org-a/r", "org-b/r", "org-c/r", "org-d/r"].flatMap(
+      (repo) => [
+        pushEventAt(repo, "2025-07-01T10:00:00Z"),
+        pushEventAt(repo, "2026-03-01T10:00:00Z"),
+      ],
+    );
+    const events = padToMinEvents(spanEvents, "testuser");
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Deep long-term project engagement",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-10);
+  });
+
+  it("applies base mitigation (-5 pts) when 2–3 repos have 4+ month engagement span", () => {
+    const spanEvents = ["org-a/r", "org-b/r"].flatMap((repo) => [
+      pushEventAt(repo, "2025-07-01T10:00:00Z"),
+      pushEventAt(repo, "2026-03-01T10:00:00Z"),
+    ]);
+    const events = padToMinEvents(spanEvents, "testuser");
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) => f.label === "Long-term project engagement",
+    );
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when only 1 repo has a 4+ month span", () => {
+    const spanEvents = [
+      pushEventAt("org-a/r", "2025-07-01T10:00:00Z"),
+      pushEventAt("org-a/r", "2026-03-01T10:00:00Z"),
+    ];
+    const events = padToMinEvents(spanEvents, "testuser");
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Deep long-term project engagement" ||
+        f.label === "Long-term project engagement",
+    );
+    expect(flag).toBeUndefined();
+  });
+
+  it("does not count repos with a span shorter than 4 months", () => {
+    // Two repos but each only has a 2-month span (60 days < 120)
+    const spanEvents = ["org-a/r", "org-b/r"].flatMap((repo) => [
+      pushEventAt(repo, "2025-10-01T10:00:00Z"),
+      pushEventAt(repo, "2025-12-01T10:00:00Z"),
+    ]);
+    const events = padToMinEvents(spanEvents, "testuser");
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find(
+      (f) =>
+        f.label === "Deep long-term project engagement" ||
+        f.label === "Long-term project engagement",
+    );
+    expect(flag).toBeUndefined();
+  });
+});
+
+// ─── day-of-week variance ─────────────────────────────────────────────────────
+
+describe("Day-of-week variance mitigating signal", () => {
+  // Jan 1 2026 = Thursday, so:
+  // Sun = Jan 4, Mon = Jan 5, Tue = Jan 6, Wed = Jan 7,
+  // Thu = Jan 8, Fri = Jan 9, Sat = Jan 10
+
+  it("applies mitigation (-5 pts) when activity is concentrated on weekdays (CV ≥ 0.3)", () => {
+    // 8 events each on Mon–Thu (32 total), none on Fri/Sat/Sun
+    // CV ≈ 0.87 ≥ 0.3
+    const monThu: GitHubEvent[] = [];
+    for (let week = 0; week < 4; week++) {
+      const base = 5 + week * 7; // Jan 5, 12, 19, 26 for Monday
+      monThu.push(
+        pushEventAt("org/repo", `2026-01-${String(base).padStart(2, "0")}T10:00:00Z`),     // Mon
+        pushEventAt("org/repo", `2026-01-${String(base + 1).padStart(2, "0")}T10:00:00Z`), // Tue
+        pushEventAt("org/repo", `2026-01-${String(base + 2).padStart(2, "0")}T10:00:00Z`), // Wed
+        pushEventAt("org/repo", `2026-01-${String(base + 3).padStart(2, "0")}T10:00:00Z`), // Thu
+      );
+    }
+    // 16 events so far; add 16 more for Feb to hit 32 total
+    for (let week = 0; week < 4; week++) {
+      const base = 2 + week * 7; // Feb 2, 9, 16, 23 for Monday
+      monThu.push(
+        pushEventAt("org/repo", `2026-02-${String(base).padStart(2, "0")}T10:00:00Z`),
+        pushEventAt("org/repo", `2026-02-${String(base + 1).padStart(2, "0")}T10:00:00Z`),
+        pushEventAt("org/repo", `2026-02-${String(base + 2).padStart(2, "0")}T10:00:00Z`),
+        pushEventAt("org/repo", `2026-02-${String(base + 3).padStart(2, "0")}T10:00:00Z`),
+      );
+    }
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: monThu,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Human activity patterns");
+    expect(flag).toBeDefined();
+    expect(flag?.points).toBe(-5);
+  });
+
+  it("does not trigger when activity is evenly spread across all 7 days (CV < 0.3)", () => {
+    // 4 events per day of week = 28 total, CV = 0
+    const uniform: GitHubEvent[] = [];
+    for (let week = 0; week < 4; week++) {
+      const base = 4 + week * 7; // starts on Sunday
+      for (let d = 0; d < 7; d++) {
+        uniform.push(
+          pushEventAt("org/repo", `2026-01-${String(base + d).padStart(2, "0")}T10:00:00Z`),
+        );
+      }
+    }
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events: uniform,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Human activity patterns");
+    expect(flag).toBeUndefined();
+  });
+
+  it("does not trigger when fewer than 20 events (sample too small)", () => {
+    // 15 events — below DOW_EVENTS_MIN
+    const events = Array.from({ length: 15 }, (_, i) =>
+      pushEventAt("org/repo", `2026-01-${String(i + 1).padStart(2, "0")}T10:00:00Z`),
+    );
+
+    const result = identifyReplicant({
+      createdAt: ESTABLISHED_CREATED_AT,
+      reposCount: ESTABLISHED_REPOS,
+      accountName: "testuser",
+      events,
+    });
+
+    const flag = result.flags.find((f) => f.label === "Human activity patterns");
+    expect(flag).toBeUndefined();
+  });
+});
