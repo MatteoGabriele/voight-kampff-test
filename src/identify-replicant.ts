@@ -67,6 +67,7 @@ export function identifyReplicant({
   reposCount,
   accountName,
   events,
+  repos,
 }: IdentifyReplicantOptions): IdentifyReplicantResult {
   const flags: IdentifyFlag[] = [];
 
@@ -832,11 +833,82 @@ export function identifyReplicant({
         detail: `${Math.round(foreignRatio * 100)}% of activity on other people's repos`,
       });
     }
+
+  }
+
+  // Merged external PR mitigating signal: a merged PR requires a human maintainer on the other side — third-party attestation that's hard to fake at scale
+  if (events.length >= CONFIG.MIN_EVENTS_FOR_ANALYSIS) {
+    const userLogin = accountName.toLowerCase();
+    const mergedExternalRepos = new Set<string>();
+    for (const e of events) {
+      if (e.type !== "PullRequestEvent") continue;
+      const repoOwner = e.repo?.name?.split("/")[0]?.toLowerCase();
+      if (!repoOwner || repoOwner === userLogin) continue;
+      const isMergedPR =
+        e.payload?.action === "merged" ||
+        (e.payload?.action === "closed" &&
+          (e.payload?.pull_request as { merged?: boolean } | undefined)
+            ?.merged === true);
+      if (isMergedPR) {
+        const repo = e.repo?.name;
+        if (repo) mergedExternalRepos.add(repo.toLowerCase());
+      }
+    }
+
+    if (mergedExternalRepos.size >= CONFIG.MERGED_PR_REPOS_HIGH) {
+      flags.push({
+        label: "Accepted contributions across many repos",
+        points: -CONFIG.POINTS_ESTABLISHED_CONTRIBUTOR_HIGH,
+        detail: `${mergedExternalRepos.size} different repos merged their PRs`,
+      });
+    } else if (mergedExternalRepos.size >= CONFIG.MERGED_PR_REPOS_MIN) {
+      flags.push({
+        label: "Accepted contributions across repos",
+        points: -CONFIG.POINTS_ESTABLISHED_CONTRIBUTOR,
+        detail: `${mergedExternalRepos.size} different repos merged their PRs`,
+      });
+    }
+  }
+
+  // Account age mitigating signal: AI-seeded bots are almost exclusively post-2022; 3+ year accounts predate the wave and are structurally unlikely to be AI-seeded
+  if (accountAge >= CONFIG.AGE_VETERAN_ACCOUNT) {
+    flags.push({
+      label: "Long-standing account",
+      points: -CONFIG.POINTS_VETERAN_ACCOUNT_MITIGATION,
+      detail: `Account is ${accountAge} days old (5+ years)`,
+    });
+  } else if (accountAge >= CONFIG.AGE_SENIOR_ACCOUNT) {
+    flags.push({
+      label: "Established account",
+      points: -CONFIG.POINTS_SENIOR_ACCOUNT_MITIGATION,
+      detail: `Account is ${accountAge} days old (3+ years)`,
+    });
+  }
+
+  // Pre-AI repo mitigating signal: bots almost never have repos predating 2025; requires caller to pass repos from GET /users/{username}/repos
+  if (repos && repos.length > 0) {
+    const preAiRepoCount = repos.filter(
+      (r) => new Date(r.created_at).getFullYear() < CONFIG.PRE_AI_REPOS_YEAR,
+    ).length;
+
+    if (preAiRepoCount >= CONFIG.PRE_AI_REPOS_HIGH) {
+      flags.push({
+        label: "Pre-AI development history",
+        points: -CONFIG.POINTS_PRE_AI_REPOS_HIGH,
+        detail: `${preAiRepoCount} repos created before ${CONFIG.PRE_AI_REPOS_YEAR}`,
+      });
+    } else if (preAiRepoCount >= CONFIG.PRE_AI_REPOS_MIN) {
+      flags.push({
+        label: "Pre-AI activity",
+        points: -CONFIG.POINTS_PRE_AI_REPOS,
+        detail: `${preAiRepoCount} repos created before ${CONFIG.PRE_AI_REPOS_YEAR}`,
+      });
+    }
   }
 
   // Invert score: 100 = human, 0 = bot
   const score = flags.reduce((total, flag) => (total += flag.points), 0);
-  const humanScore = Math.max(0, 100 - score);
+  const humanScore = Math.min(100, Math.max(0, 100 - score));
 
   // Classification based on inverted score
   let classification: IdentityClassification = "automation";

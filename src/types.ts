@@ -21,6 +21,7 @@ export type IdentifyReplicantOptions = {
   reposCount: number;
   accountName: string;
   events: GitHubEvent[];
+  repos?: Array<{ created_at: string }>;
 };
 
 export type IdentityClassification = "organic" | "mixed" | "automation";

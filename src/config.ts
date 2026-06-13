@@ -120,4 +120,24 @@ export const CONFIG = {
   BRANCH_PR_PATTERN_RATIO_MIN_ESTABLISHED: 0.8, // stricter ratio for established (80%)
   BRANCH_PR_COUNT_RATIO_MIN: 0.65, // branches/PRs ratio must be >= this (low ratio = legitimate dev with many unrelated PRs)
   POINTS_BRANCH_PR_AUTOMATION: 35, // strong automation indicator
+
+  // Merged external PR mitigating signals (third-party human attestation)
+  // A merged PR requires a different account to accept the work
+  MERGED_PR_REPOS_MIN: 3,                   // >= 3 distinct repos with merged PRs
+  MERGED_PR_REPOS_HIGH: 8,                  // >= 8 distinct repos with merged PRs
+  POINTS_ESTABLISHED_CONTRIBUTOR: 10,       // negative flag points for 3–7 repos
+  POINTS_ESTABLISHED_CONTRIBUTOR_HIGH: 20,  // negative flag points for 8+ repos
+
+  // Account age mitigating signals (accounts predating the AI coding wave)
+  AGE_SENIOR_ACCOUNT: 1095,              // 3+ years old (~pre-2023)
+  AGE_VETERAN_ACCOUNT: 1825,             // 5+ years old (~pre-2021)
+  POINTS_SENIOR_ACCOUNT_MITIGATION: 10,
+  POINTS_VETERAN_ACCOUNT_MITIGATION: 20,
+
+  // Repos created before the AI era (evidence of pre-AI development history)
+  PRE_AI_REPOS_YEAR: 2025,               // repos created before this year qualify
+  PRE_AI_REPOS_MIN: 3,                   // >= 3 qualifying repos = base mitigation
+  PRE_AI_REPOS_HIGH: 8,                  // >= 8 qualifying repos = high mitigation
+  POINTS_PRE_AI_REPOS: 10,
+  POINTS_PRE_AI_REPOS_HIGH: 20,
 } as const;

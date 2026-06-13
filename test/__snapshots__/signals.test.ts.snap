@@ -19,30 +19,40 @@ exports[`Signals > analysis 'automation/joannwalsh' 1`] = `
       "label": "Multiple forks",
       "points": 26,
     },
+    {
+      "detail": "Account is 1097 days old (3+ years)",
+      "label": "Established account",
+      "points": -10,
+    },
   ],
   "profile": {
-    "age": 1096,
+    "age": 1097,
     "repos": 134,
   },
-  "score": 0,
+  "score": 9,
 }
 `;
 
 exports[`Signals > analysis 'automation/reedpurdy' 1`] = `
 {
-  "classification": "automation",
+  "classification": "mixed",
   "flags": [
     {
       "detail": "13 repos forked within 24 hours",
       "label": "Many recent forks",
       "points": 51,
     },
+    {
+      "detail": "Account is 1372 days old (3+ years)",
+      "label": "Established account",
+      "points": -10,
+    },
   ],
   "profile": {
     "age": 1372,
     "repos": 125,
   },
-  "score": 49,
+  "score": 59,
 }
 `;
 
@@ -57,7 +67,7 @@ exports[`Signals > analysis 'automation/sheilaleffler' 1`] = `
     },
   ],
   "profile": {
-    "age": 396,
+    "age": 397,
     "repos": 31,
   },
   "score": 65,
@@ -67,9 +77,20 @@ exports[`Signals > analysis 'automation/sheilaleffler' 1`] = `
 exports[`Signals > analysis 'user/claudiaschoen' 1`] = `
 {
   "classification": "organic",
-  "flags": [],
+  "flags": [
+    {
+      "detail": "8 different repos merged their PRs",
+      "label": "Accepted contributions across many repos",
+      "points": -20,
+    },
+    {
+      "detail": "Account is 4994 days old (5+ years)",
+      "label": "Long-standing account",
+      "points": -20,
+    },
+  ],
   "profile": {
-    "age": 4993,
+    "age": 4994,
     "repos": 536,
   },
   "score": 100,
@@ -79,9 +100,15 @@ exports[`Signals > analysis 'user/claudiaschoen' 1`] = `
 exports[`Signals > analysis 'user/elenahowe' 1`] = `
 {
   "classification": "organic",
-  "flags": [],
+  "flags": [
+    {
+      "detail": "Account is 3221 days old (5+ years)",
+      "label": "Long-standing account",
+      "points": -20,
+    },
+  ],
   "profile": {
-    "age": 3220,
+    "age": 3221,
     "repos": 859,
   },
   "score": 100,
@@ -109,9 +136,15 @@ exports[`Signals > analysis 'user/robinsatterfield' 1`] = `
 exports[`Signals > analysis 'user/shellychristiansen' 1`] = `
 {
   "classification": "organic",
-  "flags": [],
+  "flags": [
+    {
+      "detail": "Account is 2353 days old (5+ years)",
+      "label": "Long-standing account",
+      "points": -20,
+    },
+  ],
   "profile": {
-    "age": 2352,
+    "age": 2353,
     "repos": 53,
   },
   "score": 100,
@@ -121,7 +154,18 @@ exports[`Signals > analysis 'user/shellychristiansen' 1`] = `
 exports[`Signals > analysis 'user/vaughnjohnston' 1`] = `
 {
   "classification": "organic",
-  "flags": [],
+  "flags": [
+    {
+      "detail": "5 different repos merged their PRs",
+      "label": "Accepted contributions across repos",
+      "points": -10,
+    },
+    {
+      "detail": "Account is 4576 days old (5+ years)",
+      "label": "Long-standing account",
+      "points": -20,
+    },
+  ],
   "profile": {
     "age": 4576,
     "repos": 30,
